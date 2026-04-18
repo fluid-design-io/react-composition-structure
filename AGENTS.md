@@ -1,450 +1,1127 @@
-# React Composition Structure
+# React Composition Patterns
 
+**Version 1.0.0**  
 Engineering  
-April 2026
+January 2026
 
-> Note:
-> This guide is optimized for agents and AI-assisted refactors. It focuses on
-> codebase shape: folders, file ownership, export boundaries, naming, and how
-> composition patterns map onto those structures.
+> **Note:**  
+> This document is mainly for agents and LLMs to follow when maintaining,  
+> generating, or refactoring React codebases using composition. Humans  
+> may also find it useful, but guidance here is optimized for automation  
+> and consistency by AI-assisted workflows.
+
+---
 
 ## Abstract
 
-React and React Native codebases become hard to maintain when composition
-patterns are present in the UI layer but not reflected in the file system.
-Monolithic files, bag-of-exports modules, generic names, and route wrappers that
-own feature orchestration all increase churn.
+Composition patterns for building flexible, maintainable React components. Avoid boolean prop proliferation by using compound components, lifting state, and composing internals. These patterns make codebases easier for both humans and AI agents to work with as they scale.
 
-This guide defines four distinct rule areas:
-
-1. shared component folders
-2. route-bound feature folders
-3. public API boundaries
-4. naming stems and suffixes
+---
 
 ## Table of Contents
 
-1. [Component Folders](#1-component-folders) — HIGH
-   - 1.1 [Use Compound Component Folders for Shared Multi-Part UI](#11-use-compound-component-folders-for-shared-multi-part-ui)
-2. [Feature Module Folders](#2-feature-module-folders) — HIGH
-   - 2.1 [Use Feature Folders for Route-Bound UI](#21-use-feature-folders-for-route-bound-ui)
-3. [Public API Boundaries](#3-public-api-boundaries) — MEDIUM
-   - 3.1 [Export One Module Root by Default](#31-export-one-module-root-by-default)
-4. [Naming Stems and Suffixes](#4-naming-stems-and-suffixes) — MEDIUM
-   - 4.1 [Keep One Stem and Use Responsibility-Driven Suffixes](#41-keep-one-stem-and-use-responsibility-driven-suffixes)
+1. [Component Architecture](#1-component-architecture) — **HIGH**
+   - 1.1 [Avoid Boolean Prop Proliferation](#11-avoid-boolean-prop-proliferation)
+   - 1.2 [Use Compound Components](#12-use-compound-components)
+2. [State Management](#2-state-management) — **MEDIUM**
+   - 2.1 [Decouple State Management from UI](#21-decouple-state-management-from-ui)
+   - 2.2 [Define Generic Context Interfaces for Dependency Injection](#22-define-generic-context-interfaces-for-dependency-injection)
+   - 2.3 [Lift State into Provider Components](#23-lift-state-into-provider-components)
+3. [Implementation Patterns](#3-implementation-patterns) — **MEDIUM**
+   - 3.1 [Create Explicit Component Variants](#31-create-explicit-component-variants)
+   - 3.2 [Prefer Composing Children Over Render Props](#32-prefer-composing-children-over-render-props)
+4. [React 19 APIs](#4-react-19-apis) — **MEDIUM**
+   - 4.1 [React 19 API Changes](#41-react-19-api-changes)
+5. [File Organization](#5-file-organization) — **MEDIUM**
+   - 5.1 [Nest Folders When Filename Prefixes Repeat](#51-nest-folders-when-filename-prefixes-repeat)
+   - 5.2 [Colocate Internals Until a Second Consumer Appears](#52-colocate-internals-until-a-second-consumer-appears)
 
-## 1. Component Folders
+---
 
-### 1.1 Use Compound Component Folders for Shared Multi-Part UI
+## 1. Component Architecture
 
-Use a compound component folder when a shared component has:
+**Impact: HIGH**
 
-- multiple named subparts consumers compose directly
-- shared state needed by several sibling leaves
-- variants that would otherwise turn into boolean props
+Fundamental patterns for structuring components to avoid prop
+proliferation and enable flexible composition.
 
-Keep leaf components flat when they are small and presentational. Foldering is a
-response to real complexity, not a default ceremony.
+### 1.1 Avoid Boolean Prop Proliferation
 
-**Bad: one monolithic component plus sibling exports**
+**Impact: CRITICAL (prevents unmaintainable component variants)**
 
-```text
-components/
-  Composer.tsx
-  ComposerHeader.tsx
-  ComposerFooter.tsx
-  ComposerInput.tsx
-  ComposerActions.tsx
-  useComposerState.ts
-```
+Don't add boolean props like `isThread`, `isEditing`, `isDMThread` to customize
 
-Problems:
+component behavior. Each boolean doubles possible states and creates
 
-- the public API is a bag of related files
-- shared state tends to leak through props or ad hoc hooks
-- consumers must know too many implementation names
+unmaintainable conditional logic. Use composition instead.
 
-**Good: one folder with one public namespace**
-
-```text
-composer/
-  composer.tsx
-  composer.context.tsx
-  composer.display.tsx
-  composer.actions.tsx
-  composer.types.ts
-  index.ts
-```
-
-The folder mirrors the composition model:
-
-- `composer.tsx` assembles the namespace
-- `composer.context.tsx` owns state-sharing boundaries
-- `composer.display.tsx` owns read-oriented leaves
-- `composer.actions.tsx` owns interactive leaves
-- `composer.types.ts` owns the context contract
-- `index.ts` owns the public boundary
-
-**Bad: UI coupled to one specific state hook**
+**Incorrect: boolean props create exponential complexity**
 
 ```tsx
-function ComposerInput() {
-  const { input, setInput } = useChannelComposerState()
-  return <TextInput value={input} onChangeText={setInput} />
+function Composer({
+  onSubmit,
+  isThread,
+  channelId,
+  isDMThread,
+  dmId,
+  isEditing,
+  isForwarding,
+}: Props) {
+  return (
+    <form>
+      <Header />
+      <Input />
+      {isDMThread ? (
+        <AlsoSendToDMField id={dmId} />
+      ) : isThread ? (
+        <AlsoSendToChannelField id={channelId} />
+      ) : null}
+      {isEditing ? (
+        <EditActions />
+      ) : isForwarding ? (
+        <ForwardActions />
+      ) : (
+        <DefaultActions />
+      )}
+      <Footer onSubmit={onSubmit} />
+    </form>
+  )
 }
 ```
 
-This traps the UI inside one implementation.
-
-**Good: provider-led state sharing through a stable contract**
+**Correct: composition eliminates conditionals**
 
 ```tsx
-type ComposerState = {
-  input: string
-  attachments: Attachment[]
+// Channel composer
+function ChannelComposer() {
+  return (
+    <Composer.Frame>
+      <Composer.Header />
+      <Composer.Input />
+      <Composer.Footer>
+        <Composer.Attachments />
+        <Composer.Formatting />
+        <Composer.Emojis />
+        <Composer.Submit />
+      </Composer.Footer>
+    </Composer.Frame>
+  )
 }
 
-type ComposerActions = {
-  updateInput: (value: string) => void
-  submit: () => void
+// Thread composer - adds "also send to channel" field
+function ThreadComposer({ channelId }: { channelId: string }) {
+  return (
+    <Composer.Frame>
+      <Composer.Header />
+      <Composer.Input />
+      <AlsoSendToChannelField id={channelId} />
+      <Composer.Footer>
+        <Composer.Formatting />
+        <Composer.Emojis />
+        <Composer.Submit />
+      </Composer.Footer>
+    </Composer.Frame>
+  )
 }
 
-type ComposerMeta = {
-  inputRef: React.RefObject<TextInput>
-}
-
-type ComposerContextValue = {
-  state: ComposerState
-  actions: ComposerActions
-  meta: ComposerMeta
+// Edit composer - different footer actions
+function EditComposer() {
+  return (
+    <Composer.Frame>
+      <Composer.Input />
+      <Composer.Footer>
+        <Composer.Formatting />
+        <Composer.Emojis />
+        <Composer.CancelEdit />
+        <Composer.SaveEdit />
+      </Composer.Footer>
+    </Composer.Frame>
+  )
 }
 ```
+
+Each variant is explicit about what it renders. We can share internals without
+
+sharing a single monolithic parent.
+
+### 1.2 Use Compound Components
+
+**Impact: HIGH (enables flexible composition without prop drilling)**
+
+Structure complex components as compound components with a shared context. Each
+
+subcomponent accesses shared state via context, not props. Consumers compose the
+
+pieces they need.
+
+**Incorrect: monolithic component with render props**
+
+```tsx
+function Composer({
+  renderHeader,
+  renderFooter,
+  renderActions,
+  showAttachments,
+  showFormatting,
+  showEmojis,
+}: Props) {
+  return (
+    <form>
+      {renderHeader?.()}
+      <Input />
+      {showAttachments && <Attachments />}
+      {renderFooter ? (
+        renderFooter()
+      ) : (
+        <Footer>
+          {showFormatting && <Formatting />}
+          {showEmojis && <Emojis />}
+          {renderActions?.()}
+        </Footer>
+      )}
+    </form>
+  )
+}
+```
+
+**Correct: compound components with shared context**
 
 ```tsx
 const ComposerContext = createContext<ComposerContextValue | null>(null)
 
-function ComposerProvider({
-  children,
-  value,
-}: {
-  children: React.ReactNode
-  value: ComposerContextValue
-}) {
-  return <ComposerContext value={value}>{children}</ComposerContext>
+function ComposerProvider({ children, state, actions, meta }: ProviderProps) {
+  return (
+    <ComposerContext value={{ state, actions, meta }}>
+      {children}
+    </ComposerContext>
+  )
+}
+
+function ComposerFrame({ children }: { children: React.ReactNode }) {
+  return <form>{children}</form>
 }
 
 function ComposerInput() {
   const {
     state,
-    actions: { updateInput },
+    actions: { update },
     meta: { inputRef },
   } = use(ComposerContext)
-
   return (
     <TextInput
       ref={inputRef}
       value={state.input}
-      onChangeText={updateInput}
+      onChangeText={(text) => update((s) => ({ ...s, input: text }))}
     />
+  )
+}
+
+function ComposerSubmit() {
+  const {
+    actions: { submit },
+  } = use(ComposerContext)
+  return <Button onPress={submit}>Send</Button>
+}
+
+// Export as compound component
+const Composer = {
+  Provider: ComposerProvider,
+  Frame: ComposerFrame,
+  Input: ComposerInput,
+  Submit: ComposerSubmit,
+  Header: ComposerHeader,
+  Footer: ComposerFooter,
+  Attachments: ComposerAttachments,
+  Formatting: ComposerFormatting,
+  Emojis: ComposerEmojis,
+}
+```
+
+**Usage:**
+
+```tsx
+<Composer.Provider state={state} actions={actions} meta={meta}>
+  <Composer.Frame>
+    <Composer.Header />
+    <Composer.Input />
+    <Composer.Footer>
+      <Composer.Formatting />
+      <Composer.Submit />
+    </Composer.Footer>
+  </Composer.Frame>
+</Composer.Provider>
+```
+
+Consumers explicitly compose exactly what they need. No hidden conditionals. And the state, actions and meta are dependency-injected by a parent provider, allowing multiple usages of the same component structure.
+
+---
+
+## 2. State Management
+
+**Impact: MEDIUM**
+
+Patterns for lifting state and managing shared context across
+composed components.
+
+### 2.1 Decouple State Management from UI
+
+**Impact: MEDIUM (enables swapping state implementations without changing UI)**
+
+The provider component should be the only place that knows how state is managed.
+
+UI components consume the context interface—they don't know if state comes from
+
+useState, Zustand, or a server sync.
+
+**Incorrect: UI coupled to state implementation**
+
+```tsx
+function ChannelComposer({ channelId }: { channelId: string }) {
+  // UI component knows about global state implementation
+  const state = useGlobalChannelState(channelId)
+  const { submit, updateInput } = useChannelSync(channelId)
+
+  return (
+    <Composer.Frame>
+      <Composer.Input
+        value={state.input}
+        onChange={(text) => sync.updateInput(text)}
+      />
+      <Composer.Submit onPress={() => sync.submit()} />
+    </Composer.Frame>
   )
 }
 ```
 
-This is the important file-system implication:
-
-- put the context contract in `composer.types.ts`
-- put provider wiring in `composer.context.tsx`
-- let display and action leaves consume the interface rather than own state
-
-**Sharing state outside the visible frame**
-
-State sharing is a provider concern, not a visual nesting concern.
-Components outside the main frame can still read or mutate state if they live
-inside the provider boundary.
+**Correct: state management isolated in provider**
 
 ```tsx
-function ForwardMessageDialog() {
-  return (
-    <Composer.Provider value={value}>
-      <Dialog>
-        <Composer.Frame>
-          <Composer.Input />
-          <Composer.Footer>
-            <Composer.Submit />
-          </Composer.Footer>
-        </Composer.Frame>
+// Provider handles all state management details
+function ChannelProvider({
+  channelId,
+  children,
+}: {
+  channelId: string
+  children: React.ReactNode
+}) {
+  const { state, update, submit } = useGlobalChannel(channelId)
+  const inputRef = useRef(null)
 
-        <MessagePreview />
-        <DialogActions>
-          <ForwardButton />
-        </DialogActions>
-      </Dialog>
+  return (
+    <Composer.Provider
+      state={state}
+      actions={{ update, submit }}
+      meta={{ inputRef }}
+    >
+      {children}
+    </Composer.Provider>
+  )
+}
+
+// UI component only knows about the context interface
+function ChannelComposer() {
+  return (
+    <Composer.Frame>
+      <Composer.Header />
+      <Composer.Input />
+      <Composer.Footer>
+        <Composer.Submit />
+      </Composer.Footer>
+    </Composer.Frame>
+  )
+}
+
+// Usage
+function Channel({ channelId }: { channelId: string }) {
+  return (
+    <ChannelProvider channelId={channelId}>
+      <ChannelComposer />
+    </ChannelProvider>
+  )
+}
+```
+
+**Different providers, same UI:**
+
+```tsx
+// Local state for ephemeral forms
+function ForwardMessageProvider({ children }) {
+  const [state, setState] = useState(initialState)
+  const forwardMessage = useForwardMessage()
+
+  return (
+    <Composer.Provider
+      state={state}
+      actions={{ update: setState, submit: forwardMessage }}
+    >
+      {children}
+    </Composer.Provider>
+  )
+}
+
+// Global synced state for channels
+function ChannelProvider({ channelId, children }) {
+  const { state, update, submit } = useGlobalChannel(channelId)
+
+  return (
+    <Composer.Provider state={state} actions={{ update, submit }}>
+      {children}
     </Composer.Provider>
   )
 }
 ```
 
-This is why context ownership belongs in the component-folder rule: it defines
-how shared UI folders map composition and state sharing into files.
+The same `Composer.Input` component works with both providers because it only
 
-**Checklist**
+depends on the context interface, not the implementation.
 
-- Is the component truly shared or multi-part?
-- Are several leaves reading the same state?
-- Would booleans or render props otherwise proliferate?
-- Does the folder expose one root namespace?
-- Is provider wiring isolated from leaf rendering?
+### 2.2 Define Generic Context Interfaces for Dependency Injection
 
-## 2. Feature Module Folders
+**Impact: HIGH (enables dependency-injectable state across use-cases)**
 
-### 2.1 Use Feature Folders for Route-Bound UI
+Define a **generic interface** for your component context with three parts:
 
-Use a feature folder when a page or screen owns real local complexity:
+`state`, `actions`, and `meta`. This interface is a contract that any provider
 
-- route UI plus several internal leaves
-- feature-specific query or mutation orchestration
-- multiple related route surfaces
-- nested subflows within one feature
+can implement—enabling the same UI components to work with completely different
 
-Do not force small pages or screens into folders.
+state implementations.
 
-**Bad: feature logic scattered across unrelated globals**
+**Core principle:** Lift state, compose internals, make state
 
-```text
-checkout.tsx
-useCheckout.ts
-CheckoutList.tsx
-CheckoutSummary.tsx
-types.ts
-helpers.ts
-```
+dependency-injectable.
 
-Problems:
-
-- the feature has no obvious home
-- data logic drifts into generic hook folders
-- route wrappers tend to accumulate orchestration
-
-**Good: one feature folder with thin route wiring**
-
-```text
-checkout/
-  checkout.tsx
-  checkout.screen.tsx
-  checkout.data.ts
-  checkout.list.tsx
-  checkout.summary.tsx
-  checkout.types.ts
-  index.ts
-```
-
-File ownership:
-
-- `checkout.tsx` assembles the public namespace
-- `checkout.screen.tsx` owns the main route-facing UI
-- `checkout.data.ts` owns feature-local orchestration
-- leaf files such as `checkout.list.tsx` and `checkout.summary.tsx` own
-  presentational sections
-- `index.ts` exports only the feature root
-
-**Bad: route file owns feature orchestration**
+**Incorrect: UI coupled to specific state implementation**
 
 ```tsx
-export default function CheckoutRoute() {
-  const { cart, isSubmitting, submitOrder } = useCheckout()
+function ComposerInput() {
+  // Tightly coupled to a specific hook
+  const { input, setInput } = useChannelComposerState()
+  return <TextInput value={input} onChangeText={setInput} />
+}
+```
 
+**Correct: generic interface enables dependency injection**
+
+```tsx
+// Define a GENERIC interface that any provider can implement
+interface ComposerState {
+  input: string
+  attachments: Attachment[]
+  isSubmitting: boolean
+}
+
+interface ComposerActions {
+  update: (updater: (state: ComposerState) => ComposerState) => void
+  submit: () => void
+}
+
+interface ComposerMeta {
+  inputRef: React.RefObject<TextInput>
+}
+
+interface ComposerContextValue {
+  state: ComposerState
+  actions: ComposerActions
+  meta: ComposerMeta
+}
+
+const ComposerContext = createContext<ComposerContextValue | null>(null)
+```
+
+**UI components consume the interface, not the implementation:**
+
+```tsx
+function ComposerInput() {
+  const {
+    state,
+    actions: { update },
+    meta,
+  } = use(ComposerContext)
+
+  // This component works with ANY provider that implements the interface
   return (
-    <CheckoutLayout>
-      <CheckoutList cart={cart} />
-      <CheckoutSubmitButton
-        loading={isSubmitting}
-        onPress={submitOrder}
-      />
-    </CheckoutLayout>
+    <TextInput
+      ref={meta.inputRef}
+      value={state.input}
+      onChangeText={(text) => update((s) => ({ ...s, input: text }))}
+    />
   )
 }
 ```
 
-**Good: route wrapper stays thin**
+**Different providers implement the same interface:**
 
 ```tsx
-import { Checkout } from "@/features/checkout"
+// Provider A: Local state for ephemeral forms
+function ForwardMessageProvider({ children }: { children: React.ReactNode }) {
+  const [state, setState] = useState(initialState)
+  const inputRef = useRef(null)
+  const submit = useForwardMessage()
 
-export default function CheckoutRoute() {
-  return <Checkout.Screen />
+  return (
+    <ComposerContext
+      value={{
+        state,
+        actions: { update: setState, submit },
+        meta: { inputRef },
+      }}
+    >
+      {children}
+    </ComposerContext>
+  )
+}
+
+// Provider B: Global synced state for channels
+function ChannelProvider({ channelId, children }: Props) {
+  const { state, update, submit } = useGlobalChannel(channelId)
+  const inputRef = useRef(null)
+
+  return (
+    <ComposerContext
+      value={{
+        state,
+        actions: { update, submit },
+        meta: { inputRef },
+      }}
+    >
+      {children}
+    </ComposerContext>
+  )
 }
 ```
 
-If the router requires params, read them in the route file and pass them into
-the feature surface. Keep the rest of the orchestration inside the feature.
+**The same composed UI works with both:**
 
-**What belongs in `*.data.ts`**
+```tsx
+// Works with ForwardMessageProvider (local state)
+<ForwardMessageProvider>
+  <Composer.Frame>
+    <Composer.Input />
+    <Composer.Submit />
+  </Composer.Frame>
+</ForwardMessageProvider>
 
-Put feature-owned orchestration there:
-
-- grouped view models
-- screen-local queries and mutations
-- filtering and search state
-- adapters only this feature uses
-
-Do not put generic API clients or widely shared hooks there.
-
-**Nested subflows**
-
-When one feature contains distinct subflows, use nested folders only if they
-represent real ownership.
-
-```text
-profile/
-  profile.tsx
-  profile.screen.tsx
-  profile.data.ts
-  security/
-    profile-security.tsx
-    profile-security.screen.tsx
-    profile-security.data.ts
-    index.ts
-  preferences/
-    profile-preferences.tsx
-    profile-preferences.form.tsx
-    index.ts
-  index.ts
+// Works with ChannelProvider (global synced state)
+<ChannelProvider channelId="abc">
+  <Composer.Frame>
+    <Composer.Input />
+    <Composer.Submit />
+  </Composer.Frame>
+</ChannelProvider>
 ```
 
-Create nested folders for real subflows, not symmetry.
+**Custom UI outside the component can access state and actions:**
 
-**Checklist**
+```tsx
+function ForwardMessageDialog() {
+  return (
+    <ForwardMessageProvider>
+      <Dialog>
+        {/* The composer UI */}
+        <Composer.Frame>
+          <Composer.Input placeholder="Add a message, if you'd like." />
+          <Composer.Footer>
+            <Composer.Formatting />
+            <Composer.Emojis />
+          </Composer.Footer>
+        </Composer.Frame>
 
-- Is a flat route file still enough?
-- Does the feature have one obvious home?
-- Is route wiring thin?
-- Is feature-owned orchestration colocated in `*.data.ts`?
-- Do nested folders represent real subflows?
+        {/* Custom UI OUTSIDE the composer, but INSIDE the provider */}
+        <MessagePreview />
 
-## 3. Public API Boundaries
+        {/* Actions at the bottom of the dialog */}
+        <DialogActions>
+          <CancelButton />
+          <ForwardButton />
+        </DialogActions>
+      </Dialog>
+    </ForwardMessageProvider>
+  )
+}
 
-### 3.1 Export One Module Root by Default
+// This button lives OUTSIDE Composer.Frame but can still submit based on its context!
+function ForwardButton() {
+  const {
+    actions: { submit },
+  } = use(ComposerContext)
+  return <Button onPress={submit}>Forward</Button>
+}
 
-For both shared components and feature folders, export one module root by
-default. This keeps internal structure free to change without churn for
-callers.
+// This preview lives OUTSIDE Composer.Frame but can read composer's state!
+function MessagePreview() {
+  const { state } = use(ComposerContext)
+  return <Preview message={state.input} attachments={state.attachments} />
+}
+```
 
-**Bad: export the entire inside of the folder**
+The provider boundary is what matters—not the visual nesting. Components that
 
-```ts
-export { CheckoutScreen } from "./checkout.screen"
-export { CheckoutList } from "./checkout.list"
-export { useCheckoutData } from "./checkout.data"
-export { CheckoutSummary } from "./checkout.summary"
+need shared state don't have to be inside the `Composer.Frame`. They just need
+
+to be within the provider.
+
+The `ForwardButton` and `MessagePreview` are not visually inside the composer
+
+box, but they can still access its state and actions. This is the power of
+
+lifting state into providers.
+
+The UI is reusable bits you compose together. The state is dependency-injected
+
+by the provider. Swap the provider, keep the UI.
+
+### 2.3 Lift State into Provider Components
+
+**Impact: HIGH (enables state sharing outside component boundaries)**
+
+Move state management into dedicated provider components. This allows sibling
+
+components outside the main UI to access and modify state without prop drilling
+
+or awkward refs.
+
+**Incorrect: state trapped inside component**
+
+```tsx
+function ForwardMessageComposer() {
+  const [state, setState] = useState(initialState)
+  const forwardMessage = useForwardMessage()
+
+  return (
+    <Composer.Frame>
+      <Composer.Input />
+      <Composer.Footer />
+    </Composer.Frame>
+  )
+}
+
+// Problem: How does this button access composer state?
+function ForwardMessageDialog() {
+  return (
+    <Dialog>
+      <ForwardMessageComposer />
+      <MessagePreview /> {/* Needs composer state */}
+      <DialogActions>
+        <CancelButton />
+        <ForwardButton /> {/* Needs to call submit */}
+      </DialogActions>
+    </Dialog>
+  )
+}
+```
+
+**Incorrect: useEffect to sync state up**
+
+```tsx
+function ForwardMessageDialog() {
+  const [input, setInput] = useState('')
+  return (
+    <Dialog>
+      <ForwardMessageComposer onInputChange={setInput} />
+      <MessagePreview input={input} />
+    </Dialog>
+  )
+}
+
+function ForwardMessageComposer({ onInputChange }) {
+  const [state, setState] = useState(initialState)
+  useEffect(() => {
+    onInputChange(state.input) // Sync on every change 😬
+  }, [state.input])
+}
+```
+
+**Incorrect: reading state from ref on submit**
+
+```tsx
+function ForwardMessageDialog() {
+  const stateRef = useRef(null)
+  return (
+    <Dialog>
+      <ForwardMessageComposer stateRef={stateRef} />
+      <ForwardButton onPress={() => submit(stateRef.current)} />
+    </Dialog>
+  )
+}
+```
+
+**Correct: state lifted to provider**
+
+```tsx
+function ForwardMessageProvider({ children }: { children: React.ReactNode }) {
+  const [state, setState] = useState(initialState)
+  const forwardMessage = useForwardMessage()
+  const inputRef = useRef(null)
+
+  return (
+    <Composer.Provider
+      state={state}
+      actions={{ update: setState, submit: forwardMessage }}
+      meta={{ inputRef }}
+    >
+      {children}
+    </Composer.Provider>
+  )
+}
+
+function ForwardMessageDialog() {
+  return (
+    <ForwardMessageProvider>
+      <Dialog>
+        <ForwardMessageComposer />
+        <MessagePreview /> {/* Custom components can access state and actions */}
+        <DialogActions>
+          <CancelButton />
+          <ForwardButton /> {/* Custom components can access state and actions */}
+        </DialogActions>
+      </Dialog>
+    </ForwardMessageProvider>
+  )
+}
+
+function ForwardButton() {
+  const { actions } = use(Composer.Context)
+  return <Button onPress={actions.submit}>Forward</Button>
+}
+```
+
+The ForwardButton lives outside the Composer.Frame but still has access to the
+
+submit action because it's within the provider. Even though it's a one-off
+
+component, it can still access the composer's state and actions from outside the
+
+UI itself.
+
+**Key insight:** Components that need shared state don't have to be visually
+
+nested inside each other—they just need to be within the same provider.
+
+---
+
+## 3. Implementation Patterns
+
+**Impact: MEDIUM**
+
+Specific techniques for implementing compound components and
+context providers.
+
+### 3.1 Create Explicit Component Variants
+
+**Impact: MEDIUM (self-documenting code, no hidden conditionals)**
+
+Instead of one component with many boolean props, create explicit variant
+
+components. Each variant composes the pieces it needs. The code documents
+
+itself.
+
+**Incorrect: one component, many modes**
+
+```tsx
+// What does this component actually render?
+<Composer
+  isThread
+  isEditing={false}
+  channelId='abc'
+  showAttachments
+  showFormatting={false}
+/>
+```
+
+**Correct: explicit variants**
+
+```tsx
+// Immediately clear what this renders
+<ThreadComposer channelId="abc" />
+
+// Or
+<EditMessageComposer messageId="xyz" />
+
+// Or
+<ForwardMessageComposer messageId="123" />
+```
+
+Each implementation is unique, explicit and self-contained. Yet they can each
+
+use shared parts.
+
+**Implementation:**
+
+```tsx
+function ThreadComposer({ channelId }: { channelId: string }) {
+  return (
+    <ThreadProvider channelId={channelId}>
+      <Composer.Frame>
+        <Composer.Input />
+        <AlsoSendToChannelField channelId={channelId} />
+        <Composer.Footer>
+          <Composer.Formatting />
+          <Composer.Emojis />
+          <Composer.Submit />
+        </Composer.Footer>
+      </Composer.Frame>
+    </ThreadProvider>
+  )
+}
+
+function EditMessageComposer({ messageId }: { messageId: string }) {
+  return (
+    <EditMessageProvider messageId={messageId}>
+      <Composer.Frame>
+        <Composer.Input />
+        <Composer.Footer>
+          <Composer.Formatting />
+          <Composer.Emojis />
+          <Composer.CancelEdit />
+          <Composer.SaveEdit />
+        </Composer.Footer>
+      </Composer.Frame>
+    </EditMessageProvider>
+  )
+}
+
+function ForwardMessageComposer({ messageId }: { messageId: string }) {
+  return (
+    <ForwardMessageProvider messageId={messageId}>
+      <Composer.Frame>
+        <Composer.Input placeholder="Add a message, if you'd like." />
+        <Composer.Footer>
+          <Composer.Formatting />
+          <Composer.Emojis />
+          <Composer.Mentions />
+        </Composer.Footer>
+      </Composer.Frame>
+    </ForwardMessageProvider>
+  )
+}
+```
+
+Each variant is explicit about:
+
+- What provider/state it uses
+
+- What UI elements it includes
+
+- What actions are available
+
+No boolean prop combinations to reason about. No impossible states.
+
+### 3.2 Prefer Composing Children Over Render Props
+
+**Impact: MEDIUM (cleaner composition, better readability)**
+
+Use `children` for composition instead of `renderX` props. Children are more
+
+readable, compose naturally, and don't require understanding callback
+
+signatures.
+
+**Incorrect: render props**
+
+```tsx
+function Composer({
+  renderHeader,
+  renderFooter,
+  renderActions,
+}: {
+  renderHeader?: () => React.ReactNode
+  renderFooter?: () => React.ReactNode
+  renderActions?: () => React.ReactNode
+}) {
+  return (
+    <form>
+      {renderHeader?.()}
+      <Input />
+      {renderFooter ? renderFooter() : <DefaultFooter />}
+      {renderActions?.()}
+    </form>
+  )
+}
+
+// Usage is awkward and inflexible
+return (
+  <Composer
+    renderHeader={() => <CustomHeader />}
+    renderFooter={() => (
+      <>
+        <Formatting />
+        <Emojis />
+      </>
+    )}
+    renderActions={() => <SubmitButton />}
+  />
+)
+```
+
+**Correct: compound components with children**
+
+```tsx
+function ComposerFrame({ children }: { children: React.ReactNode }) {
+  return <form>{children}</form>
+}
+
+function ComposerFooter({ children }: { children: React.ReactNode }) {
+  return <footer className='flex'>{children}</footer>
+}
+
+// Usage is flexible
+return (
+  <Composer.Frame>
+    <CustomHeader />
+    <Composer.Input />
+    <Composer.Footer>
+      <Composer.Formatting />
+      <Composer.Emojis />
+      <SubmitButton />
+    </Composer.Footer>
+  </Composer.Frame>
+)
+```
+
+**When render props are appropriate:**
+
+```tsx
+// Render props work well when you need to pass data back
+<List
+  data={items}
+  renderItem={({ item, index }) => <Item item={item} index={index} />}
+/>
+```
+
+Use render props when the parent needs to provide data or state to the child.
+
+Use children when composing static structure.
+
+---
+
+## 4. React 19 APIs
+
+**Impact: MEDIUM**
+
+React 19+ only. Don't use `forwardRef`; use `use()` instead of `useContext()`.
+
+### 4.1 React 19 API Changes
+
+**Impact: MEDIUM (cleaner component definitions and context usage)**
+
+> **⚠️ React 19+ only.** Skip this if you're on React 18 or earlier.
+
+In React 19, `ref` is now a regular prop (no `forwardRef` wrapper needed), and `use()` replaces `useContext()`.
+
+**Incorrect: forwardRef in React 19**
+
+```tsx
+const ComposerInput = forwardRef<TextInput, Props>((props, ref) => {
+  return <TextInput ref={ref} {...props} />
+})
+```
+
+**Correct: ref as a regular prop**
+
+```tsx
+function ComposerInput({ ref, ...props }: Props & { ref?: React.Ref<TextInput> }) {
+  return <TextInput ref={ref} {...props} />
+}
+```
+
+**Incorrect: useContext in React 19**
+
+```tsx
+const value = useContext(MyContext)
+```
+
+**Correct: use instead of useContext**
+
+```tsx
+const value = use(MyContext)
+```
+
+`use()` can also be called conditionally, unlike `useContext()`.
+
+---
+
+## 5. File Organization
+
+**Impact: MEDIUM**
+
+Composition patterns produce many small files. How they're laid out on disk
+determines whether a feature stays navigable as it grows. These rules apply
+composition thinking to the file system: folders are namespaces, `index.ts` is
+the public API, and internals stay local until reuse is proven.
+
+### 5.1 Nest Folders When Filename Prefixes Repeat
+
+**Impact: MEDIUM (keeps composed features discoverable as they grow)**
+
+When 3+ files share the same prefix (e.g. `feature.detail.*`), promote the
+prefix to a folder. The prefix becomes implicit from the path, and `index.ts`
+becomes the folder's public API boundary.
+
+Keep a short sub-prefix on files inside the folder (`detail/detail.header.tsx`,
+not `detail/header.tsx`). This preserves grep-ability — searches for
+`detail.header` still resolve — and avoids dozens of ambiguous `header.tsx`
+files floating around the repo.
+
+**Incorrect: flat structure with repeated prefixes**
+
+```
+features/
+  feature.detail.header.tsx
+  feature.detail.list.tsx
+  feature.detail.footer.tsx
+  feature.detail.utils.ts
+  feature.detail.data.ts
+  feature.detail.types.ts
+  feature.detail.index.ts
+  feature.list.tsx
+  feature.data.ts
+  feature.types.ts
 ```
 
 Problems:
 
-- callers couple to internal layout
-- every refactor becomes a breaking import change
-- public API expands faster than the actual design intent
+- Prefix is repeated in every filename
 
-**Good: export the root only**
+- `feature.detail.*` and `feature.*` blur together when sorted
 
-```ts
-export { Checkout } from "./checkout"
+- No clear public API — every file looks equally importable
+
+- Hard to move the `detail` subtree to a new location
+
+**Correct: nest once the prefix repeats**
+
+```
+features/
+  feature/
+    detail/
+      detail.header.tsx
+      detail.list.tsx
+      detail.footer.tsx
+      detail.utils.ts
+      detail.data.ts
+      detail.types.ts
+      index.ts          // public API for `detail`
+    feature.list.tsx
+    feature.data.ts
+    feature.types.ts
+    index.ts            // public API for `feature`
 ```
 
-The same rule applies to compound components:
+`index.ts` only re-exports what's meant to be consumed externally. Internals
+(`detail.utils.ts`, `detail.data.ts`) stay private unless explicitly exported.
+This is the file-system analogue of compound components: the folder *is* the
+namespace.
 
-```ts
-export { Composer } from "./composer"
+**Naming stays mechanical:**
+
+| File                              | Exports                          |
+| --------------------------------- | -------------------------------- |
+| `composer/composer.input.tsx`     | `ComposerInput`                  |
+| `composer/composer.footer.tsx`    | `ComposerFooter`                 |
+| `composer/index.ts`               | `Composer` (namespace object)    |
+
+The file path maps 1:1 to the component name, so agents don't have to guess
+where `Composer.Input` lives.
+
+**When not to nest:**
+
+- A folder with only 1–2 files is premature; keep it flat
+
+- A single file used once elsewhere doesn't justify a folder
+
+- Don't nest purely for aesthetic symmetry — wait for the 3+ prefix repeat
+
+**Barrel caveat:** `index.ts` re-exports are useful as a public boundary, but
+deep or transitive barrels can hurt tree-shaking and dev-server performance.
+Prefer **one barrel per feature folder**, not one per subfolder. Internal
+imports within a folder should reference files directly (`./detail.header`,
+not `./index`).
+
+### 5.2 Colocate Internals Until a Second Consumer Appears
+
+**Impact: MEDIUM (prevents premature abstraction)**
+
+Keep a feature's helpers, data fetching, types, and tests next to the
+component that uses them. Only lift code into a shared `lib/`, `shared/`, or
+`utils/` location when a **second** consumer actually appears.
+
+Premature sharing creates two problems:
+
+1. The shared module becomes a dumping ground with unclear ownership
+
+2. Changes to one consumer's needs ripple into unrelated features
+
+**Incorrect: extracted before a second consumer exists**
+
+```
+src/
+  lib/
+    format-date.ts          // used only by feature.detail
+    detail-utils.ts         // used only by feature.detail
+  features/
+    feature/
+      detail/
+        detail.header.tsx   // imports from ../../../lib/format-date
 ```
 
-Keep internal leaves internal unless they are intentionally designed as public
-entrypoints.
+- `lib/` suggests reuse that doesn't exist
 
-**Reasonable exceptions**
+- Refactoring `detail` now requires touching an unrelated directory
 
-Export additional symbols only when they are truly part of the public contract:
+- Future engineers can't tell what's actually shared vs. accidentally hoisted
 
-- a documented type meant for external consumers
-- a route helper explicitly reused outside the module
-- a test utility in a clearly separate testing boundary
+**Correct: colocate until reuse is proven**
 
-If an exception exists, document it rather than letting the barrel grow
-implicitly.
-
-**Checklist**
-
-- Does `index.ts` export the module root only?
-- Are callers importing namespace surfaces instead of internal leaves?
-- Are exceptions intentional and documented?
-
-## 4. Naming Stems and Suffixes
-
-### 4.1 Keep One Stem and Use Responsibility-Driven Suffixes
-
-Naming should make ownership obvious before opening the file.
-
-The default pattern in this skill is:
-
-- one folder stem
-- one repeated file stem
-- one responsibility suffix per file
-
-**Bad: mixed naming styles inside one folder**
-
-```text
-checkout/
-  index.tsx
-  useCheckout.ts
-  CheckoutScreen.tsx
-  helpers.ts
-  types.ts
+```
+src/
+  features/
+    feature/
+      detail/
+        detail.header.tsx
+        detail.utils.ts     // format-date lives here
+        detail.data.ts
+        detail.test.tsx
+        index.ts
 ```
 
-Problems:
+If a second feature later needs `formatDate`, *then* promote it:
 
-- no consistent stem
-- unclear ownership
-- file purpose is hidden behind generic names
-
-**Good: consistent stem plus explicit suffixes**
-
-```text
-checkout/
-  checkout.tsx
-  checkout.screen.tsx
-  checkout.data.ts
-  checkout.summary.tsx
-  checkout.types.ts
-  index.ts
+```
+src/
+  lib/
+    format-date.ts          // now genuinely shared
+  features/
+    feature/detail/...
+    other-feature/...
 ```
 
-Useful suffixes:
+**Rules of thumb:**
 
-- `.screen.tsx` for route-facing screen surfaces
-- `.page.tsx` for page-oriented repos
-- `.data.ts` for feature-owned orchestration
-- `.types.ts` for shared types
-- `.context.tsx` for provider wiring
-- `.display.tsx` for read-oriented compound leaves
-- `.actions.tsx` for interactive compound leaves
-- `.utils.ts` for pure helpers
-- `.constants.ts` for static configuration
-- `.md` for scoped documentation
+- One consumer → colocate
 
-**Adaptation rule**
+- Two consumers in the same feature tree → lift to the nearest common parent
 
-Do not force a second naming system onto a mature repo. If the repo already uses
-PascalCase files or another coherent style, preserve that style and translate
-the structure:
+- Two+ consumers across feature trees → lift to `lib/` or `shared/`
 
-- keep one stem
-- keep explicit responsibilities
-- keep one public boundary
+- Tests live next to the file they test (`detail.header.test.tsx`)
 
-Consistency matters more than whether the repo chooses kebab-case or PascalCase.
+- Types used only inside a folder stay in `*.types.ts` within that folder;
+  types crossing a folder boundary get exported via `index.ts`
 
-**Checklist**
+**Why this pairs with compound components:**
 
-- Do all module-owned files share a stem?
-- Does each suffix communicate one clear responsibility?
-- Are generic names like `helpers.ts` or `stuff.ts` avoided?
-- Is the repo's existing naming system being preserved when it is already coherent?
+Compound components treat a folder as a namespace with a public API. Colocation
+is the same principle applied to non-component code: the folder owns its
+internals, and the `index.ts` decides what leaks out. Together they make
+features **movable** — you can relocate or delete a whole folder without
+hunting for strays in `lib/`.
+
+---
+
+## References
+
+1. [https://react.dev](https://react.dev)
+2. [https://react.dev/learn/passing-data-deeply-with-context](https://react.dev/learn/passing-data-deeply-with-context)
+3. [https://react.dev/reference/react/use](https://react.dev/reference/react/use)
