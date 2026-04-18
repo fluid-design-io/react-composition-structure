@@ -1,96 +1,85 @@
 ---
-name: vercel-composition-patterns
-description:
-  React composition patterns that scale. Use when refactoring components with
-  boolean prop proliferation, building flexible component libraries, or
-  designing reusable APIs. Triggers on tasks involving compound components,
-  render props, context providers, or component architecture. Includes React 19
-  API changes.
-license: MIT
+name: react-composition-structure
+description: React and React Native file-system architecture patterns that scale. Use when restructuring component folders, page or screen feature modules, `index.ts` export boundaries, naming conventions, colocated `*.data.ts` files, or translating composition patterns into stable repo structure. Triggers on compound component folders, route-bound feature modules, public API cleanup, and bad-vs-good file organization examples.
 metadata:
-  author: vercel
-  version: '1.0.0'
+  author: oliverpan
+  version: 1.0.0
 ---
 
-# React Composition Patterns
+# React Composition Structure
 
-Composition patterns for building flexible, maintainable React components. Avoid
-boolean prop proliferation by using compound components, lifting state, and
-composing internals. These patterns make codebases easier for both humans and AI
-agents to work with as they scale.
+File-system and module-boundary patterns for React and React Native codebases.
+This skill complements `vercel-composition-patterns`: Vercel explains the
+component architecture; this skill explains how to express those patterns in a
+codebase's folders, files, exports, and naming.
 
 ## When to Apply
 
 Reference these guidelines when:
 
-- Refactoring components with many boolean props
-- Building reusable component libraries
-- Designing flexible component APIs
-- Reviewing component architecture
-- Working with compound components or context providers
+- Restructuring reusable component folders
+- Refactoring pages or screens into feature modules
+- Cleaning up over-exported `index.ts` files
+- Normalizing naming conventions across a module
+- Deciding where context, data orchestration, and docs should live
 
 ## Rule Categories by Priority
 
-| Priority | Category                | Impact | Prefix          |
-| -------- | ----------------------- | ------ | --------------- |
-| 1        | Component Architecture  | HIGH   | `architecture-` |
-| 2        | State Management        | MEDIUM | `state-`        |
-| 3        | Implementation Patterns | MEDIUM | `patterns-`     |
-| 4        | React 19 APIs           | MEDIUM | `react19-`      |
-| 5        | File Organization       | MEDIUM | `organization-` |
+| Priority | Category                     | Impact | Prefix          |
+| -------- | ---------------------------- | ------ | --------------- |
+| 1        | Component Folders            | HIGH   | `architecture-` |
+| 2        | Feature Module Folders       | HIGH   | `architecture-` |
+| 3        | Public API Boundaries        | MEDIUM | `boundaries-`   |
+| 4        | Naming Stems and Suffixes    | MEDIUM | `naming-`       |
+| 5        | Organization Heuristics      | MEDIUM | `organization-` |
 
 ## Quick Reference
 
-### 1. Component Architecture (HIGH)
+### 1. Component Folders (HIGH)
 
-- `architecture-avoid-boolean-props` - Don't add boolean props to customize
-  behavior; use composition
-- `architecture-compound-components` - Structure complex components with shared
-  context
+- `architecture-compound-component-folders` - Organize shared multi-part
+  components around one root namespace, clear file ownership, and provider-led
+  state sharing
 
-### 2. State Management (MEDIUM)
+### 2. Feature Module Folders (HIGH)
 
-- `state-decouple-implementation` - Provider is the only place that knows how
-  state is managed
-- `state-context-interface` - Define generic interface with state, actions, meta
-  for dependency injection
-- `state-lift-state` - Move state into provider components for sibling access
+- `architecture-feature-module-folders` - Organize pages and screens into
+  foldered feature modules with thin route wrappers and colocated `*.data.ts`
 
-### 3. Implementation Patterns (MEDIUM)
+### 3. Public API Boundaries (MEDIUM)
 
-- `patterns-explicit-variants` - Create explicit variant components instead of
-  boolean modes
-- `patterns-children-over-render-props` - Use children for composition instead
-  of renderX props
+- `boundaries-public-api` - Export one module root by default and keep leaves
+  internal unless they are intentionally public
 
-### 4. React 19 APIs (MEDIUM)
+### 4. Naming Stems and Suffixes (MEDIUM)
 
-> **⚠️ React 19+ only.** Skip this section if using React 18 or earlier.
+- `naming-stems-and-suffixes` - Keep one module stem, use explicit suffixes, and
+  preserve strong repo conventions instead of mixing naming systems
 
-- `react19-no-forwardref` - Don't use `forwardRef`; use `use()` instead of `useContext()`
-
-### 5. File Organization (MEDIUM)
+### 5. Organization Heuristics (MEDIUM)
 
 - `organization-nest-when-prefix-repeats` - Promote repeated filename prefixes
-  into folders with an `index.ts` public boundary
+  into a nested folder with an `index.ts` public boundary once 3+ files share
+  the stem
 - `organization-colocate-internals` - Keep helpers, data, types, and tests next
-  to their consumer until a second consumer appears
+  to their consumer until a second consumer proves the need to lift
 
 ## How to Use
 
-Read individual rule files for detailed explanations and code examples:
+Read the single rule file that matches the job:
 
-```
-rules/architecture-avoid-boolean-props.md
-rules/state-context-interface.md
+```text
+rules/architecture-compound-component-folders.md
+rules/boundaries-public-api.md
 ```
 
 Each rule file contains:
 
-- Brief explanation of why it matters
-- Incorrect code example with explanation
-- Correct code example with explanation
-- Additional context and references
+- A single main concern
+- Why it matters
+- Bad and good examples
+- File trees or code samples
+- Practical exceptions and checklists
 
 ## Full Compiled Document
 
