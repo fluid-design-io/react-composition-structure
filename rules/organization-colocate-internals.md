@@ -65,6 +65,10 @@ src/
 - One consumer → colocate
 - Two consumers in the same feature tree → lift to the nearest common parent
 - Two+ consumers across feature trees → lift to `lib/` or `shared/`
+- when nesting a subflow folder (per nest-when-prefix-repeats), move data that
+  is only consumed inside the subflow into a colocated `*.data.ts`; data
+  consumed by both the root feature and the subflow stays in the feature-level
+  `*.data.ts` until a second consumer proves it should split
 - Tests live next to the file they test (`detail.header.test.tsx`)
 - Types used only inside a folder stay in `*.types.ts` within that folder;
   types crossing a folder boundary get exported via `index.ts`

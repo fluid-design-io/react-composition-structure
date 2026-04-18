@@ -22,6 +22,11 @@ This guide defines four distinct rule areas:
 3. public API boundaries
 4. naming stems and suffixes
 
+Folder location (`components/` vs `features/`) is orthogonal to these rules.
+A module under `components/` can own route-bound screens, and a module under
+`features/` can expose a shared compound namespace. The rules describe file
+shape, not folder location.
+
 ## Table of Contents
 
 1. [Component Folders](#1-component-folders) — HIGH
@@ -190,6 +195,11 @@ function ForwardMessageDialog() {
 This is why context ownership belongs in the component-folder rule: it defines
 how shared UI folders map composition and state sharing into files.
 
+A module may own both a shared compound namespace and route-bound screens
+when the shared surface genuinely belongs to the same domain. Keep the compound
+namespace narrow (leaves only — no screens) and expose screens as top-level
+exports per 2.1.
+
 **Checklist**
 
 - Is the component truly shared or multi-part?
@@ -243,12 +253,17 @@ checkout/
 
 File ownership:
 
-- `checkout.tsx` assembles the public namespace
+- `<feature>.tsx` assembles the public namespace when the feature exposes a
+  compound surface (2+ leaves, or 1 leaf plus shared state). A feature that
+  only exposes screens and a single leaf can skip `<feature>.tsx` and export
+  directly from `index.ts`.
 - `checkout.screen.tsx` owns the main route-facing UI
 - `checkout.data.ts` owns feature-local orchestration
 - leaf files such as `checkout.list.tsx` and `checkout.summary.tsx` own
   presentational sections
-- `index.ts` exports only the feature root
+- `index.ts` owns the public boundary (feature root by default; top-level
+  screen exports when a feature has two or more route surfaces — see
+  **Multi-screen feature modules**)
 
 **Bad: route file owns feature orchestration**
 
@@ -281,6 +296,33 @@ export default function CheckoutRoute() {
 If the router requires params, read them in the route file and pass them into
 the feature surface. Keep the rest of the orchestration inside the feature.
 
+**Multi-screen feature modules**
+
+When a feature has two or more route surfaces, export each screen as a
+top-level symbol from `index.ts` instead of namespacing them under the feature
+root. Keep the feature namespace reserved for genuinely shared compound leaves
+(for example `Faculty.Avatar`). A feature with exactly one screen may still use
+`Feature.Screen` for symmetry.
+
+```text
+faculty/
+  faculty.tsx                // Faculty = { Avatar }
+  faculty.directory.screen.tsx
+  faculty.detail.screen.tsx
+  faculty.avatar.tsx
+  faculty.data.ts
+  index.ts
+```
+
+```ts
+export { Faculty } from "./faculty"
+export { FacultyDirectoryScreen } from "./faculty.directory.screen"
+export { FacultyDetailScreen } from "./faculty.detail.screen"
+```
+
+The set of exports should map to the set of intentional public entry points —
+one root is the default, not a hard cap.
+
 **What belongs in `*.data.ts`**
 
 Put feature-owned orchestration there:
@@ -291,6 +333,9 @@ Put feature-owned orchestration there:
 - adapters only this feature uses
 
 Do not put generic API clients or widely shared hooks there.
+
+When a subflow nests (5.1), subflow-only data moves into the subflow's
+`*.data.ts`; see 5.2.
 
 **Nested subflows**
 
@@ -347,10 +392,16 @@ Problems:
 - every refactor becomes a breaking import change
 - public API expands faster than the actual design intent
 
-**Good: export the root only**
+**Good: export only intentional public entry points**
 
 ```ts
 export { Checkout } from "./checkout"
+```
+
+```ts
+export { Faculty } from "./faculty"
+export { FacultyDirectoryScreen } from "./faculty.directory.screen"
+export { FacultyDetailScreen } from "./faculty.detail.screen"
 ```
 
 The same rule applies to compound components:
@@ -358,6 +409,10 @@ The same rule applies to compound components:
 ```ts
 export { Composer } from "./composer"
 ```
+
+The rule is not "always exactly one export" — it is "exports match intentional
+public entry points." One root is the default; screens become top-level
+exports when a feature has two or more route surfaces (see 2.1).
 
 Keep internal leaves internal unless they are intentionally designed as public
 entrypoints.
@@ -375,7 +430,8 @@ implicitly.
 
 **Checklist**
 
-- Does `index.ts` export the module root only?
+- Does `index.ts` export only intentional public entry points (root by default,
+  plus top-level screens when 2.1 applies)?
 - Are callers importing namespace surfaces instead of internal leaves?
 - Are exceptions intentional and documented?
 
@@ -419,6 +475,12 @@ checkout/
   checkout.types.ts
   index.ts
 ```
+
+**Per-folder reset**
+
+The stem rule applies per folder boundary. A nested folder (see 5.1) resets the
+stem to the folder's own name: `checkout/billing/billing.form.tsx` is correct;
+`checkout/billing/checkout.billing.form.tsx` is not.
 
 Useful suffixes:
 
@@ -539,10 +601,11 @@ guess where `Composer.Input` lives.
 
 **Barrel caveat**
 
-`index.ts` should only re-export intentional public surfaces. Prefer one barrel
-per feature folder, not one per subfolder. Internal imports inside a folder
-should reference files directly (`./detail.header`), not go through the local
-`index.ts`.
+Subfolders may have a local `index.ts` only when they represent a real subflow
+with its own public surface consumed by parent siblings (the nested `detail/`
+example above is such a case). Otherwise, imports inside the subfolder should
+reference files directly (`./detail.header`), and the feature's root
+`index.ts` remains the sole public boundary.
 
 **Checklist**
 
@@ -613,6 +676,10 @@ src/
 - two consumers in the same feature tree → lift to the nearest common parent
 - two or more consumers across unrelated feature trees → lift to `lib/` or
   `shared/`
+- when nesting a subflow folder (per 5.1), move data that is only consumed
+  inside the subflow into a colocated `*.data.ts`; data consumed by both the
+  root feature and the subflow stays in the feature-level `*.data.ts` until a
+  second consumer proves it should split
 - tests sit next to the file they test (`detail.header.test.tsx`)
 - types used only inside a folder stay in `*.types.ts` within that folder;
   types crossing a folder boundary are exported via `index.ts`

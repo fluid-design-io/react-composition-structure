@@ -26,6 +26,11 @@ checkout/
   index.ts
 ```
 
+**Per-folder reset:** The stem rule applies per folder boundary. A nested folder
+(see `organization-nest-when-prefix-repeats.md`) resets the stem to the folder's
+own name: `checkout/billing/billing.form.tsx` is correct;
+`checkout/billing/checkout.billing.form.tsx` is not.
+
 Useful suffixes:
 
 - `.screen.tsx`

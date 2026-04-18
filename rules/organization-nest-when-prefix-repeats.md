@@ -85,8 +85,8 @@ where `Composer.Input` lives.
 - A single file used once elsewhere doesn't justify a folder
 - Don't nest purely for aesthetic symmetry — wait for the 3+ prefix repeat
 
-**Barrel caveat:** `index.ts` re-exports are useful as a public boundary, but
-deep or transitive barrels can hurt tree-shaking and dev-server performance.
-Prefer **one barrel per feature folder**, not one per subfolder. Internal
-imports within a folder should reference files directly
-(`./detail.header`, not `./index`).
+**Barrel caveat:** Subfolders may have a local `index.ts` only when they
+represent a real subflow with its own public surface consumed by parent siblings
+(the nested `detail/` example above is such a case). Otherwise, imports inside
+the subfolder should reference files directly (`./detail.header`), and the
+feature's root `index.ts` remains the sole public boundary.

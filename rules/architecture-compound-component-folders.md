@@ -85,5 +85,12 @@ main frame and still consume the same context if it stays inside the provider.
 **Do not use this rule for:**
 
 - small leaf components
-- route-bound feature folders
 - modules that do not share state or composition across siblings
+
+Folder location (`components/` vs `features/`) is orthogonal: the same file
+shapes apply in either tree.
+
+A module may own both a shared compound namespace and route-bound screens when
+the shared surface genuinely belongs to the same domain. Keep the compound
+namespace narrow (leaves only — no screens) and expose screens as top-level
+exports per `architecture-feature-module-folders.md`.

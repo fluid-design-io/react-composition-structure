@@ -11,10 +11,16 @@ export { CheckoutList } from "./checkout.list"
 export { useCheckoutData } from "./checkout.data"
 ```
 
-**Good (barrel exports the root):**
+**Good (export only intentional public entry points):**
 
 ```ts
 export { Checkout } from "./checkout"
+```
+
+```ts
+export { Faculty } from "./faculty"
+export { FacultyDirectoryScreen } from "./faculty.directory.screen"
+export { FacultyDetailScreen } from "./faculty.detail.screen"
 ```
 
 ```ts
@@ -22,6 +28,11 @@ export { Composer } from "./composer"
 ```
 
 This keeps callers stable while the inside of the folder evolves.
+
+The rule is not "always exactly one export" — it is "exports match intentional
+public entry points." One root is the default; screens become top-level
+exports when a feature has two or more route surfaces (see
+`architecture-feature-module-folders.md`).
 
 Reasonable exceptions:
 
