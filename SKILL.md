@@ -1,10 +1,10 @@
 ---
-name: react-composition-structure
+
+## name: react-composition-structure
 description: React and React Native file-system architecture patterns that scale. Use when restructuring component folders, page or screen feature modules, `index.ts` export boundaries, naming conventions, colocated `*.data.ts` files, or translating composition patterns into stable repo structure. Triggers on compound component folders, route-bound feature modules, public API cleanup, and bad-vs-good file organization examples.
 metadata:
   author: oliverpan
   version: 1.0.0
----
 
 # React Composition Structure
 
@@ -25,44 +25,47 @@ Reference these guidelines when:
 
 ## Rule Categories by Priority
 
-| Priority | Category                     | Impact | Prefix          |
-| -------- | ---------------------------- | ------ | --------------- |
-| 1        | Component Folders            | HIGH   | `architecture-` |
-| 2        | Feature Module Folders       | HIGH   | `architecture-` |
-| 3        | Public API Boundaries        | MEDIUM | `boundaries-`   |
-| 4        | Naming Stems and Suffixes    | MEDIUM | `naming-`       |
-| 5        | Organization Heuristics      | MEDIUM | `organization-` |
+
+| Priority | Category                  | Impact | Prefix          |
+| -------- | ------------------------- | ------ | --------------- |
+| 1        | Component Folders         | HIGH   | `architecture-` |
+| 2        | Feature Module Folders    | HIGH   | `architecture-` |
+| 3        | Public API Boundaries     | MEDIUM | `boundaries-`   |
+| 4        | Naming Stems and Suffixes | MEDIUM | `naming-`       |
+| 5        | Organization Heuristics   | MEDIUM | `organization-` |
+
 
 ## Quick Reference
 
 ### 1. Component Folders (HIGH)
 
 - `architecture-compound-component-folders` - Organize shared multi-part
-  components around one root namespace, clear file ownership, and provider-led
-  state sharing
+components around one root namespace, clear file ownership, and provider-led
+state sharing
 
 ### 2. Feature Module Folders (HIGH)
 
 - `architecture-feature-module-folders` - Organize pages and screens into
-  foldered feature modules with thin route wrappers and colocated `*.data.ts`
+foldered feature modules with thin route wrappers and colocated `*.data.ts`
 
 ### 3. Public API Boundaries (MEDIUM)
 
 - `boundaries-public-api` - Export one module root by default and keep leaves
-  internal unless they are intentionally public
+internal unless they are intentionally public
 
 ### 4. Naming Stems and Suffixes (MEDIUM)
 
 - `naming-stems-and-suffixes` - Keep one module stem, use explicit suffixes, and
-  preserve strong repo conventions instead of mixing naming systems
+preserve strong repo conventions instead of mixing naming systems
 
 ### 5. Organization Heuristics (MEDIUM)
 
 - `organization-nest-when-prefix-repeats` - Promote repeated filename prefixes
-  into a nested folder with an `index.ts` public boundary once 3+ files share
-  the stem
-- `organization-colocate-internals` - Keep helpers, data, types, and tests next
-  to their consumer until a second consumer proves the need to lift
+into a nested folder with an `index.ts` public boundary once 3+ files share
+the stem
+- `organization-colocate-internals` - Keep helpers/data/types with their
+consumer, and tests in module-local `__test__/` folders, until a second
+consumer proves the need to lift
 
 ## How to Use
 

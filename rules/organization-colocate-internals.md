@@ -7,8 +7,9 @@ tags: file-organization, colocation, refactoring
 
 ## Colocate Internals Until a Second Consumer Appears
 
-Keep a feature's helpers, data fetching, types, and tests next to the
-component that uses them. Only lift code into a shared `lib/`, `shared/`, or
+Keep a feature's helpers, data fetching, and types next to the component that
+uses them. Keep tests in a module-local `__test__/` folder instead of mixing
+them into the module root. Only lift code into a shared `lib/`, `shared/`, or
 `utils/` location when a **second** consumer actually appears.
 
 Premature sharing creates two problems:
@@ -45,7 +46,8 @@ src/
         detail.header.tsx
         detail.utils.ts     // format-date lives here
         detail.data.ts
-        detail.test.tsx
+        __test__/
+          detail.header.test.tsx
         index.ts
 ```
 
@@ -69,7 +71,8 @@ src/
   is only consumed inside the subflow into a colocated `*.data.ts`; data
   consumed by both the root feature and the subflow stays in the feature-level
   `*.data.ts` until a second consumer proves it should split
-- Tests live next to the file they test (`detail.header.test.tsx`)
+- Tests live in `__test__/` within the same module
+  (`detail/__test__/detail.header.test.tsx`)
 - Types used only inside a folder stay in `*.types.ts` within that folder;
   types crossing a folder boundary get exported via `index.ts`
 

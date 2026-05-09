@@ -30,16 +30,16 @@ shape, not folder location.
 ## Table of Contents
 
 1. [Component Folders](#1-component-folders) — HIGH
-   - 1.1 [Use Compound Component Folders for Shared Multi-Part UI](#11-use-compound-component-folders-for-shared-multi-part-ui)
+  - 1.1 [Use Compound Component Folders for Shared Multi-Part UI](#11-use-compound-component-folders-for-shared-multi-part-ui)
 2. [Feature Module Folders](#2-feature-module-folders) — HIGH
-   - 2.1 [Use Feature Folders for Route-Bound UI](#21-use-feature-folders-for-route-bound-ui)
+  - 2.1 [Use Feature Folders for Route-Bound UI](#21-use-feature-folders-for-route-bound-ui)
 3. [Public API Boundaries](#3-public-api-boundaries) — MEDIUM
-   - 3.1 [Export One Module Root by Default](#31-export-one-module-root-by-default)
+  - 3.1 [Export One Module Root by Default](#31-export-one-module-root-by-default)
 4. [Naming Stems and Suffixes](#4-naming-stems-and-suffixes) — MEDIUM
-   - 4.1 [Keep One Stem and Use Responsibility-Driven Suffixes](#41-keep-one-stem-and-use-responsibility-driven-suffixes)
+  - 4.1 [Keep One Stem and Use Responsibility-Driven Suffixes](#41-keep-one-stem-and-use-responsibility-driven-suffixes)
 5. [Organization Heuristics](#5-organization-heuristics) — MEDIUM
-   - 5.1 [Nest Folders When Filename Prefixes Repeat](#51-nest-folders-when-filename-prefixes-repeat)
-   - 5.2 [Colocate Internals Until a Second Consumer Appears](#52-colocate-internals-until-a-second-consumer-appears)
+  - 5.1 [Nest Folders When Filename Prefixes Repeat](#51-nest-folders-when-filename-prefixes-repeat)
+  - 5.2 [Colocate Internals Until a Second Consumer Appears](#52-colocate-internals-until-a-second-consumer-appears)
 
 ## 1. Component Folders
 
@@ -254,16 +254,16 @@ checkout/
 File ownership:
 
 - `<feature>.tsx` assembles the public namespace when the feature exposes a
-  compound surface (2+ leaves, or 1 leaf plus shared state). A feature that
-  only exposes screens and a single leaf can skip `<feature>.tsx` and export
-  directly from `index.ts`.
+compound surface (2+ leaves, or 1 leaf plus shared state). A feature that
+only exposes screens and a single leaf can skip `<feature>.tsx` and export
+directly from `index.ts`.
 - `checkout.screen.tsx` owns the main route-facing UI
 - `checkout.data.ts` owns feature-local orchestration
 - leaf files such as `checkout.list.tsx` and `checkout.summary.tsx` own
-  presentational sections
+presentational sections
 - `index.ts` owns the public boundary (feature root by default; top-level
-  screen exports when a feature has two or more route surfaces — see
-  **Multi-screen feature modules**)
+screen exports when a feature has two or more route surfaces — see
+**Multi-screen feature modules**)
 
 **Bad: route file owns feature orchestration**
 
@@ -431,7 +431,7 @@ implicitly.
 **Checklist**
 
 - Does `index.ts` export only intentional public entry points (root by default,
-  plus top-level screens when 2.1 applies)?
+plus top-level screens when 2.1 applies)?
 - Are callers importing namespace surfaces instead of internal leaves?
 - Are exceptions intentional and documented?
 
@@ -527,7 +527,7 @@ dozen. Once multiple files share the same prefix, the prefix is no longer
 distinguishing information — it is noise.
 
 **Trigger:** three or more sibling files share the same leading stem (e.g.
-`feature.detail.*`). Promote the shared prefix to a folder and give the folder
+`feature.detail.`*). Promote the shared prefix to a folder and give the folder
 its own `index.ts`.
 
 Keep a short sub-stem on files inside the new folder
@@ -584,11 +584,13 @@ exposed.
 
 **Naming stays mechanical**
 
-| File                              | Exports                          |
-| --------------------------------- | -------------------------------- |
-| `composer/composer.input.tsx`     | `ComposerInput`                  |
-| `composer/composer.footer.tsx`    | `ComposerFooter`                 |
-| `composer/index.ts`               | `Composer` (namespace)           |
+
+| File                           | Exports                |
+| ------------------------------ | ---------------------- |
+| `composer/composer.input.tsx`  | `ComposerInput`        |
+| `composer/composer.footer.tsx` | `ComposerFooter`       |
+| `composer/index.ts`            | `Composer` (namespace) |
+
 
 The path maps 1:1 to the component name so agents and humans never have to
 guess where `Composer.Input` lives.
@@ -611,16 +613,17 @@ reference files directly (`./detail.header`), and the feature's root
 
 - Do three or more sibling files share the same leading stem?
 - Would promoting the stem to a folder collapse repetition without inventing
-  new names?
+new names?
 - Does the new folder expose only an intentional public surface via `index.ts`?
 - Is the sub-stem preserved on files inside the folder?
 
 ### 5.2 Colocate Internals Until a Second Consumer Appears
 
-Feature-owned helpers, data, types, and tests belong next to the component that
-uses them. Lifting code into a shared `lib/`, `shared/`, or `utils/` location
-before a second consumer exists creates the illusion of reuse and weakens
-ownership.
+Feature-owned helpers, data, and types belong next to the component that uses
+them. Keep tests in a module-local `__test__/` folder instead of scattering
+test files across the module root. Lifting code into a shared `lib/`,
+`shared/`, or `utils/` location before a second consumer exists creates the
+illusion of reuse and weakens ownership.
 
 **Trigger:** a second consumer actually imports the helper. Until then,
 colocate.
@@ -643,7 +646,7 @@ Problems:
 - `lib/` advertises reuse that does not exist
 - refactoring `detail` now requires edits in an unrelated directory
 - later readers cannot tell what is genuinely shared from what was hoisted too
-  early
+early
 
 **Good: colocate until reuse is proven**
 
@@ -655,7 +658,8 @@ src/
         detail.header.tsx
         detail.utils.ts     // format-date lives here
         detail.data.ts
-        detail.test.tsx
+        __test__/
+          detail.header.test.tsx
         index.ts
 ```
 
@@ -675,14 +679,15 @@ src/
 - one consumer → colocate
 - two consumers in the same feature tree → lift to the nearest common parent
 - two or more consumers across unrelated feature trees → lift to `lib/` or
-  `shared/`
+`shared/`
 - when nesting a subflow folder (per 5.1), move data that is only consumed
-  inside the subflow into a colocated `*.data.ts`; data consumed by both the
-  root feature and the subflow stays in the feature-level `*.data.ts` until a
-  second consumer proves it should split
-- tests sit next to the file they test (`detail.header.test.tsx`)
+inside the subflow into a colocated `*.data.ts`; data consumed by both the
+root feature and the subflow stays in the feature-level `*.data.ts` until a
+second consumer proves it should split
+- tests live in `__test__/` within the same module
+(`detail/__test__/detail.header.test.tsx`)
 - types used only inside a folder stay in `*.types.ts` within that folder;
-  types crossing a folder boundary are exported via `index.ts`
+types crossing a folder boundary are exported via `index.ts`
 
 **Why this pairs with the earlier rules**
 
@@ -696,6 +701,8 @@ directories.
 **Checklist**
 
 - Does a second consumer actually exist before lifting the helper?
-- Do helpers, data, types, and tests live next to their consumer?
+- Do helpers, data, and types live next to their consumer, with tests in
+module-local `__test__/` folders?
 - When code is lifted, is it lifted to the nearest real common ancestor?
 - Is `lib/` or `shared/` reserved for code with genuine cross-feature reuse?
+
