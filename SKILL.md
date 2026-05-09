@@ -1,10 +1,10 @@
 ---
-
-## name: react-composition-structure
+name: react-composition-structure
 description: React and React Native file-system architecture patterns that scale. Use when restructuring component folders, page or screen feature modules, `index.ts` export boundaries, naming conventions, colocated `*.data.ts` files, or translating composition patterns into stable repo structure. Triggers on compound component folders, route-bound feature modules, public API cleanup, and bad-vs-good file organization examples.
 metadata:
   author: oliverpan
   version: 1.0.0
+---
 
 # React Composition Structure
 
