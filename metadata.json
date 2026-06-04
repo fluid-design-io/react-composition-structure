@@ -1,12 +1,13 @@
 {
+  "name": "react-composition-structure",
   "version": "1.0.0",
   "organization": "Engineering",
-  "date": "May 2026",
-  "abstract": "Composition patterns for building flexible, maintainable React components. Avoid boolean prop proliferation by using compound components, lifting state, and composing internals. These patterns make codebases easier for both humans and AI agents to work with as they scale.",
+  "date": "April 2026",
+  "abstract": "File-system and module-boundary patterns for React and React Native codebases. Expresses composition patterns as folders, file ownership, export boundaries, and naming so structure does not drift into monolithic files or bag-of-exports modules as the codebase scales.",
   "references": [
     "https://react.dev",
     "https://react.dev/learn/passing-data-deeply-with-context",
-    "https://react.dev/reference/react/use"
+    "https://react.dev/reference/react/use",
     "https://heroui.com/docs/react/getting-started/composition"
   ]
 }

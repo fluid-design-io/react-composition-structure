@@ -1,54 +1,57 @@
 ---
 title: Nest Folders When Filename Prefixes Repeat
+slug: organization-nest-when-prefix-repeats
+group: Organization Heuristics
+groupNumber: 5
+section: "5.1"
 impact: MEDIUM
-impactDescription: keeps composed features discoverable as they grow
+groupIntro: "These rules describe *when* to move between layouts the earlier sections define. They are triggers, not new structures: apply them to decide when a flat layout should nest and when colocated code should be lifted."
 tags: file-organization, structure, refactoring
 ---
 
 ## Nest Folders When Filename Prefixes Repeat
 
-Composition produces many small files (`Feature.Header`, `Feature.List`,
-`Feature.Footer`, utilities, data, types). A flat layout with repeated
-prefixes quickly becomes hard to scan and expensive for both humans and agents
-to navigate.
+A flat module that started with two or three files eventually grows into a
+dozen. Once multiple files share the same prefix, the prefix is no longer
+distinguishing information — it is noise.
 
-**Refactor trigger:** when 3+ files share the same prefix (e.g.
-`feature.detail.*`), promote the prefix to a folder. The prefix is now implicit
-from the path, and `index.ts` becomes the folder's public API boundary.
+**Trigger:** three or more sibling files share the same leading stem (e.g.
+`calendar.detail.*`). Promote the shared prefix to a folder and give the folder
+its own `index.ts`.
 
-Keep a short sub-prefix on files inside the folder (`detail/detail.header.tsx`,
-not `detail/header.tsx`). This preserves grep-ability — searches for
-`detail.header` still resolve — and avoids dozens of ambiguous `header.tsx`
-files floating around the repo.
+Keep a short sub-stem on files inside the new folder
+(`detail/detail.header.tsx`, not `detail/header.tsx`). This preserves the one-
+stem-per-module rule from `naming-stems-and-suffixes.md` and keeps search terms
+like `detail.header` resolvable across the repo.
 
-**Incorrect (flat structure with repeated prefixes):**
+**Bad: flat layout with repeated prefixes**
 
-```
-features/
-  feature.detail.header.tsx
-  feature.detail.list.tsx
-  feature.detail.footer.tsx
-  feature.detail.utils.ts
-  feature.detail.data.ts
-  feature.detail.types.ts
-  feature.detail.index.ts
-  feature.list.tsx
-  feature.data.ts
-  feature.types.ts
+```text
+screens/
+  calendar.detail.header.tsx
+  calendar.detail.list.tsx
+  calendar.detail.footer.tsx
+  calendar.detail.utils.ts
+  calendar.detail.data.ts
+  calendar.detail.types.ts
+  calendar.detail.index.ts
+  calendar.list.tsx
+  calendar.data.ts
+  calendar.types.ts
 ```
 
 Problems:
 
-- Prefix is repeated in every filename
-- `feature.detail.*` and `feature.*` blur together when sorted
-- No clear public API — every file looks equally importable
-- Hard to move the `detail` subtree to a new location
+- the `detail` prefix is repeated in every filename with no structural payoff
+- `calendar.detail.*` and `calendar.*` interleave when sorted, hiding ownership
+- there is no public boundary — every file looks equally importable
+- the `detail` subtree cannot be moved or deleted as a unit
 
-**Correct (nest once the prefix repeats):**
+**Good: nest once the prefix repeats**
 
-```
-features/
-  feature/
+```text
+screens/
+  calendar/
     detail/
       detail.header.tsx
       detail.list.tsx
@@ -56,37 +59,49 @@ features/
       detail.utils.ts
       detail.data.ts
       detail.types.ts
-      index.ts          // public API for `detail`
-    feature.list.tsx
-    feature.data.ts
-    feature.types.ts
-    index.ts            // public API for `feature`
+      index.ts
+    calendar.list.tsx
+    calendar.data.ts
+    calendar.types.ts
+    index.ts
 ```
 
-`index.ts` only re-exports what's meant to be consumed externally. Internals
-(`detail.utils.ts`, `detail.data.ts`) stay private unless explicitly exported —
-this is the file-system analogue of compound components: the folder *is* the
-namespace.
+The folder now carries the prefix. The files keep the sub-stem so intent stays
+legible both inside and outside the folder. `index.ts` becomes the public
+boundary (see `boundaries-public-api.md`) — internal leaves stay internal
+unless intentionally exposed.
 
-**Naming stays mechanical:**
+**Naming stays mechanical**
 
-| File                              | Exports                          |
-| --------------------------------- | -------------------------------- |
-| `composer/composer.input.tsx`     | `ComposerInput`                  |
-| `composer/composer.footer.tsx`    | `ComposerFooter`                 |
-| `composer/index.ts`               | `Composer` (namespace object)    |
 
-The file path maps 1:1 to the component name, so agents don't have to guess
-where `Composer.Input` lives.
+| File                           | Exports                |
+| ------------------------------ | ---------------------- |
+| `composer/composer.input.tsx`  | `ComposerInput`        |
+| `composer/composer.footer.tsx` | `ComposerFooter`       |
+| `composer/index.ts`            | `Composer` (namespace) |
 
-**When not to nest:**
 
-- A folder with only 1–2 files is premature; keep it flat
-- A single file used once elsewhere doesn't justify a folder
-- Don't nest purely for aesthetic symmetry — wait for the 3+ prefix repeat
+The path maps 1:1 to the component name so agents and humans never have to
+guess where `Composer.Input` lives.
 
-**Barrel caveat:** Subfolders may have a local `index.ts` only when they
-represent a real subflow with its own public surface consumed by parent siblings
-(the nested `detail/` example above is such a case). Otherwise, imports inside
-the subfolder should reference files directly (`./detail.header`), and the
-feature's root `index.ts` remains the sole public boundary.
+**When not to nest**
+
+- the folder would contain only one or two files
+- the shared prefix appears only twice and has no signs of growing
+- nesting would be purely aesthetic (keep symmetry for symmetry's sake out)
+
+**Barrel caveat**
+
+Subfolders may have a local `index.ts` only when they represent a real subflow
+with its own public surface consumed by parent siblings (the nested `detail/`
+example above is such a case). Otherwise, imports inside the subfolder should
+reference files directly (`./detail.header`), and the module's root
+`index.ts` remains the sole public boundary.
+
+**Checklist**
+
+- Do three or more sibling files share the same leading stem?
+- Would promoting the stem to a folder collapse repetition without inventing
+new names?
+- Does the new folder expose only an intentional public surface via `index.ts`?
+- Is the sub-stem preserved on files inside the folder?

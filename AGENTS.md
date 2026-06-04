@@ -13,26 +13,28 @@ April 2026
 React and React Native codebases become hard to maintain when composition
 patterns are present in the UI layer but not reflected in the file system.
 Monolithic files, bag-of-exports modules, generic names, and route wrappers that
-own feature orchestration all increase churn.
+own domain orchestration all increase churn.
 
 This guide defines four distinct rule areas:
 
 1. shared component folders
-2. route-bound feature folders
+2. route-bound domain modules
 3. public API boundaries
 4. naming stems and suffixes
 
-Folder location (`components/` vs `features/`) is orthogonal to these rules.
-A module under `components/` can own route-bound screens, and a module under
-`features/` can expose a shared compound namespace. The rules describe file
-shape, not folder location.
+Folder location (`components/`, `screens/`, or any repo-specific tree) is
+orthogonal to these rules. In this guide, *feature* names the domain module
+being refactored — checkout, calendar, cart — not a literal `features/`
+directory. A module under `components/` can own route-bound screens; a module
+under `screens/` can expose a shared compound namespace. The rules describe
+module shape, not where the repo places its top-level folders.
 
 ## Table of Contents
 
 1. [Component Folders](#1-component-folders) — HIGH
   - 1.1 [Use Compound Component Folders for Shared Multi-Part UI](#11-use-compound-component-folders-for-shared-multi-part-ui)
-2. [Feature Module Folders](#2-feature-module-folders) — HIGH
-  - 2.1 [Use Feature Folders for Route-Bound UI](#21-use-feature-folders-for-route-bound-ui)
+2. [Route-Bound Module Folders](#2-route-bound-module-folders) — HIGH
+  - 2.1 [Use Module Folders for Route-Bound UI](#21-use-module-folders-for-route-bound-ui)
 3. [Public API Boundaries](#3-public-api-boundaries) — MEDIUM
   - 3.1 [Export One Module Root by Default](#31-export-one-module-root-by-default)
 4. [Naming Stems and Suffixes](#4-naming-stems-and-suffixes) — MEDIUM
@@ -198,7 +200,7 @@ how shared UI folders map composition and state sharing into files.
 A module may own both a shared compound namespace and route-bound screens
 when the shared surface genuinely belongs to the same domain. Keep the compound
 namespace narrow (leaves only — no screens) and expose screens as top-level
-exports per 2.1.
+exports per `architecture-route-bound-module-folders.md`.
 
 **Checklist**
 
@@ -208,20 +210,25 @@ exports per 2.1.
 - Does the folder expose one root namespace?
 - Is provider wiring isolated from leaf rendering?
 
-## 2. Feature Module Folders
+## 2. Route-Bound Module Folders
 
-### 2.1 Use Feature Folders for Route-Bound UI
+### 2.1 Use Module Folders for Route-Bound UI
 
-Use a feature folder when a page or screen owns real local complexity:
+Use a module folder when a page or screen owns real local complexity. *Feature*
+here means the domain surface you are restructuring — not a required `features/`
+parent directory. Place the folder wherever the repo already groups route-bound
+UI (`screens/`, `components/`, etc.).
+
+Signs the surface has grown enough:
 
 - route UI plus several internal leaves
-- feature-specific query or mutation orchestration
+- domain-specific query or mutation orchestration
 - multiple related route surfaces
-- nested subflows within one feature
+- nested subflows within one module
 
 Do not force small pages or screens into folders.
 
-**Bad: feature logic scattered across unrelated globals**
+**Bad: domain logic scattered across unrelated globals**
 
 ```text
 checkout.tsx
@@ -234,11 +241,11 @@ helpers.ts
 
 Problems:
 
-- the feature has no obvious home
+- the module has no obvious home
 - data logic drifts into generic hook folders
 - route wrappers tend to accumulate orchestration
 
-**Good: one feature folder with thin route wiring**
+**Good: one colocated module folder with thin route wiring**
 
 ```text
 checkout/
@@ -253,19 +260,19 @@ checkout/
 
 File ownership:
 
-- `<feature>.tsx` assembles the public namespace when the feature exposes a
-compound surface (2+ leaves, or 1 leaf plus shared state). A feature that
+- `<feature>.tsx` assembles the public namespace when the module exposes a
+compound surface (2+ leaves, or 1 leaf plus shared state). A module that
 only exposes screens and a single leaf can skip `<feature>.tsx` and export
 directly from `index.ts`.
 - `checkout.screen.tsx` owns the main route-facing UI
-- `checkout.data.ts` owns feature-local orchestration
+- `checkout.data.ts` owns module-local orchestration
 - leaf files such as `checkout.list.tsx` and `checkout.summary.tsx` own
 presentational sections
-- `index.ts` owns the public boundary (feature root by default; top-level
-screen exports when a feature has two or more route surfaces — see
-**Multi-screen feature modules**)
+- `index.ts` owns the public boundary (module root by default; top-level
+screen exports when a module has two or more route surfaces — see
+**Multi-screen modules**)
 
-**Bad: route file owns feature orchestration**
+**Bad: route file owns domain orchestration**
 
 ```tsx
 export default function CheckoutRoute() {
@@ -286,7 +293,7 @@ export default function CheckoutRoute() {
 **Good: route wrapper stays thin**
 
 ```tsx
-import { Checkout } from "@/features/checkout"
+import { Checkout } from "@/screens/checkout"
 
 export default function CheckoutRoute() {
   return <Checkout.Screen />
@@ -294,14 +301,14 @@ export default function CheckoutRoute() {
 ```
 
 If the router requires params, read them in the route file and pass them into
-the feature surface. Keep the rest of the orchestration inside the feature.
+the module surface. Keep the rest of the orchestration inside the module.
 
-**Multi-screen feature modules**
+**Multi-screen modules**
 
-When a feature has two or more route surfaces, export each screen as a
-top-level symbol from `index.ts` instead of namespacing them under the feature
-root. Keep the feature namespace reserved for genuinely shared compound leaves
-(for example `Faculty.Avatar`). A feature with exactly one screen may still use
+When a domain module has two or more route surfaces, export each screen as a
+top-level symbol from `index.ts` instead of namespacing them under the module
+root. Keep the module namespace reserved for genuinely shared compound leaves
+(for example `Faculty.Avatar`). A module with exactly one screen may still use
 `Feature.Screen` for symmetry.
 
 ```text
@@ -325,22 +332,23 @@ one root is the default, not a hard cap.
 
 **What belongs in `*.data.ts`**
 
-Put feature-owned orchestration there:
+Put module-owned orchestration there:
 
 - grouped view models
 - screen-local queries and mutations
 - filtering and search state
-- adapters only this feature uses
+- adapters only this module uses
 
 Do not put generic API clients or widely shared hooks there.
 
-When a subflow nests (5.1), subflow-only data moves into the subflow's
-`*.data.ts`; see 5.2.
+When a subflow nests (see `organization-nest-when-prefix-repeats.md`),
+subflow-only data moves into the subflow's `*.data.ts`; see
+`organization-colocate-internals.md`.
 
 **Nested subflows**
 
-When one feature contains distinct subflows, use nested folders only if they
-represent real ownership.
+When one domain module contains distinct subflows, use nested folders only if
+they represent real ownership.
 
 ```text
 profile/
@@ -364,17 +372,17 @@ Create nested folders for real subflows, not symmetry.
 **Checklist**
 
 - Is a flat route file still enough?
-- Does the feature have one obvious home?
+- Does the module have one obvious home?
 - Is route wiring thin?
-- Is feature-owned orchestration colocated in `*.data.ts`?
+- Is module-owned orchestration colocated in `*.data.ts`?
 - Do nested folders represent real subflows?
 
 ## 3. Public API Boundaries
 
 ### 3.1 Export One Module Root by Default
 
-For both shared components and feature folders, export one module root by
-default. This keeps internal structure free to change without churn for
+For both shared components and route-bound module folders, export one module
+root by default. This keeps internal structure free to change without churn for
 callers.
 
 **Bad: export the entire inside of the folder**
@@ -412,7 +420,8 @@ export { Composer } from "./composer"
 
 The rule is not "always exactly one export" — it is "exports match intentional
 public entry points." One root is the default; screens become top-level
-exports when a feature has two or more route surfaces (see 2.1).
+exports when a module has two or more route surfaces (see
+`architecture-route-bound-module-folders.md`).
 
 Keep internal leaves internal unless they are intentionally designed as public
 entrypoints.
@@ -431,7 +440,7 @@ implicitly.
 **Checklist**
 
 - Does `index.ts` export only intentional public entry points (root by default,
-plus top-level screens when 2.1 applies)?
+plus top-level screens when a module has two or more route surfaces)?
 - Are callers importing namespace surfaces instead of internal leaves?
 - Are exceptions intentional and documented?
 
@@ -478,15 +487,16 @@ checkout/
 
 **Per-folder reset**
 
-The stem rule applies per folder boundary. A nested folder (see 5.1) resets the
-stem to the folder's own name: `checkout/billing/billing.form.tsx` is correct;
+The stem rule applies per folder boundary. A nested folder (see
+`organization-nest-when-prefix-repeats.md`) resets the stem to the folder's own
+name: `checkout/billing/billing.form.tsx` is correct;
 `checkout/billing/checkout.billing.form.tsx` is not.
 
 Useful suffixes:
 
 - `.screen.tsx` for route-facing screen surfaces
 - `.page.tsx` for page-oriented repos
-- `.data.ts` for feature-owned orchestration
+- `.data.ts` for module-owned orchestration
 - `.types.ts` for shared types
 - `.context.tsx` for provider wiring
 - `.display.tsx` for read-oriented compound leaves
@@ -516,9 +526,7 @@ Consistency matters more than whether the repo chooses kebab-case or PascalCase.
 
 ## 5. Organization Heuristics
 
-These rules describe *when* to move between layouts the earlier sections
-define. They are triggers, not new structures: apply them to decide when a flat
-layout should nest and when colocated code should be lifted.
+These rules describe *when* to move between layouts the earlier sections define. They are triggers, not new structures: apply them to decide when a flat layout should nest and when colocated code should be lifted.
 
 ### 5.1 Nest Folders When Filename Prefixes Repeat
 
@@ -527,42 +535,42 @@ dozen. Once multiple files share the same prefix, the prefix is no longer
 distinguishing information — it is noise.
 
 **Trigger:** three or more sibling files share the same leading stem (e.g.
-`feature.detail.`*). Promote the shared prefix to a folder and give the folder
+`calendar.detail.*`). Promote the shared prefix to a folder and give the folder
 its own `index.ts`.
 
 Keep a short sub-stem on files inside the new folder
 (`detail/detail.header.tsx`, not `detail/header.tsx`). This preserves the one-
-stem-per-module rule from section 4 and keeps search terms like `detail.header`
-resolvable across the repo.
+stem-per-module rule from `naming-stems-and-suffixes.md` and keeps search terms
+like `detail.header` resolvable across the repo.
 
 **Bad: flat layout with repeated prefixes**
 
 ```text
-features/
-  feature.detail.header.tsx
-  feature.detail.list.tsx
-  feature.detail.footer.tsx
-  feature.detail.utils.ts
-  feature.detail.data.ts
-  feature.detail.types.ts
-  feature.detail.index.ts
-  feature.list.tsx
-  feature.data.ts
-  feature.types.ts
+screens/
+  calendar.detail.header.tsx
+  calendar.detail.list.tsx
+  calendar.detail.footer.tsx
+  calendar.detail.utils.ts
+  calendar.detail.data.ts
+  calendar.detail.types.ts
+  calendar.detail.index.ts
+  calendar.list.tsx
+  calendar.data.ts
+  calendar.types.ts
 ```
 
 Problems:
 
 - the `detail` prefix is repeated in every filename with no structural payoff
-- `feature.detail.*` and `feature.*` interleave when sorted, hiding ownership
+- `calendar.detail.*` and `calendar.*` interleave when sorted, hiding ownership
 - there is no public boundary — every file looks equally importable
 - the `detail` subtree cannot be moved or deleted as a unit
 
 **Good: nest once the prefix repeats**
 
 ```text
-features/
-  feature/
+screens/
+  calendar/
     detail/
       detail.header.tsx
       detail.list.tsx
@@ -571,16 +579,16 @@ features/
       detail.data.ts
       detail.types.ts
       index.ts
-    feature.list.tsx
-    feature.data.ts
-    feature.types.ts
+    calendar.list.tsx
+    calendar.data.ts
+    calendar.types.ts
     index.ts
 ```
 
 The folder now carries the prefix. The files keep the sub-stem so intent stays
 legible both inside and outside the folder. `index.ts` becomes the public
-boundary (section 3.1) — internal leaves stay internal unless intentionally
-exposed.
+boundary (see `boundaries-public-api.md`) — internal leaves stay internal
+unless intentionally exposed.
 
 **Naming stays mechanical**
 
@@ -606,7 +614,7 @@ guess where `Composer.Input` lives.
 Subfolders may have a local `index.ts` only when they represent a real subflow
 with its own public surface consumed by parent siblings (the nested `detail/`
 example above is such a case). Otherwise, imports inside the subfolder should
-reference files directly (`./detail.header`), and the feature's root
+reference files directly (`./detail.header`), and the module's root
 `index.ts` remains the sole public boundary.
 
 **Checklist**
@@ -619,7 +627,7 @@ new names?
 
 ### 5.2 Colocate Internals Until a Second Consumer Appears
 
-Feature-owned helpers, data, and types belong next to the component that uses
+Module-owned helpers, data, and types belong next to the component that uses
 them. Keep tests in a module-local `__test__/` folder instead of scattering
 test files across the module root. Lifting code into a shared `lib/`,
 `shared/`, or `utils/` location before a second consumer exists creates the
@@ -633,10 +641,10 @@ colocate.
 ```text
 src/
   lib/
-    format-date.ts          // used only by feature.detail
-    detail-utils.ts         // used only by feature.detail
-  features/
-    feature/
+    format-date.ts          // used only by calendar.detail
+    detail-utils.ts         // used only by calendar.detail
+  screens/
+    calendar/
       detail/
         detail.header.tsx   // imports from ../../../lib/format-date
 ```
@@ -652,8 +660,8 @@ early
 
 ```text
 src/
-  features/
-    feature/
+  screens/
+    calendar/
       detail/
         detail.header.tsx
         detail.utils.ts     // format-date lives here
@@ -663,27 +671,27 @@ src/
         index.ts
 ```
 
-When a second feature genuinely needs the helper, promote it then:
+When a second domain module genuinely needs the helper, promote it then:
 
 ```text
 src/
   lib/
     format-date.ts          // now genuinely shared
-  features/
-    feature/detail/...
-    other-feature/...
+  screens/
+    calendar/detail/...
+    cart/...
 ```
 
 **Rules of thumb**
 
 - one consumer → colocate
-- two consumers in the same feature tree → lift to the nearest common parent
-- two or more consumers across unrelated feature trees → lift to `lib/` or
+- two consumers in the same module tree → lift to the nearest common parent
+- two or more consumers across unrelated domain modules → lift to `lib/` or
 `shared/`
-- when nesting a subflow folder (per 5.1), move data that is only consumed
-inside the subflow into a colocated `*.data.ts`; data consumed by both the
-root feature and the subflow stays in the feature-level `*.data.ts` until a
-second consumer proves it should split
+- when nesting a subflow folder (see `organization-nest-when-prefix-repeats.md`),
+move data that is only consumed inside the subflow into a colocated `*.data.ts`;
+data consumed by both the root module and the subflow stays in the module-level
+`*.data.ts` until a second consumer proves it should split
 - tests live in `__test__/` within the same module
 (`detail/__test__/detail.header.test.tsx`)
 - types used only inside a folder stay in `*.types.ts` within that folder;
@@ -691,12 +699,13 @@ types crossing a folder boundary are exported via `index.ts`
 
 **Why this pairs with the earlier rules**
 
-Compound component folders (section 1.1) and feature folders (section 2.1) both
-treat a folder as an ownership boundary. Colocation is the same idea applied to
-non-component code: the folder owns its internals and `index.ts` decides what
-leaks out. Together these rules make features **movable** — a folder can be
-relocated or deleted as a unit without hunting for strays in shared
-directories.
+Compound component folders (see `architecture-compound-component-folders.md`)
+and route-bound module folders (see
+`architecture-route-bound-module-folders.md`) both treat a folder as an
+ownership boundary. Colocation is the same idea applied to non-component code:
+the folder owns its internals and `index.ts` decides what leaks out. Together
+these rules make modules **movable** — a folder can be relocated or deleted as
+a unit without hunting for strays in shared directories.
 
 **Checklist**
 
@@ -704,5 +713,4 @@ directories.
 - Do helpers, data, and types live next to their consumer, with tests in
 module-local `__test__/` folders?
 - When code is lifted, is it lifted to the nearest real common ancestor?
-- Is `lib/` or `shared/` reserved for code with genuine cross-feature reuse?
-
+- Is `lib/` or `shared/` reserved for code with genuine cross-module reuse?
