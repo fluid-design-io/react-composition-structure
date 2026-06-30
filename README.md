@@ -13,15 +13,23 @@ npx skills add fluid-design-io/react-composition-structure
 
 ## Structure
 
-- `rules/` - Individual rule files (one per rule)
+Shippable skill files live in `skills/react-composition-structure/` so that
+`npx skills add` vendors the whole self-contained folder (`SKILL.md`,
+`AGENTS.md`, and `rules/`) rather than just the single `SKILL.md`:
+
+- `skills/react-composition-structure/SKILL.md` - Trigger metadata and quick reference
+- `skills/react-composition-structure/rules/` - Individual rule files (one per rule)
   - `architecture-compound-component-folders.md` - Shared multi-part component folders
   - `architecture-route-bound-module-folders.md` - Route-bound domain module folders
   - `boundaries-public-api.md` - Public export boundaries
   - `naming-stems-and-suffixes.md` - Naming conventions for module-owned files
-- `SKILL.md` - Trigger metadata and quick reference
+- `**skills/react-composition-structure/AGENTS.md**` - Full compiled guide for agents (generated; do not edit by hand)
+
+Build tooling stays at the repo root and is not vendored:
+
 - `templates/agents.head.md` - Static intro (Note + Abstract) for the compiled guide
-- `scripts/build-agents.mjs` - Generates `AGENTS.md` from the sources above
-- `**AGENTS.md**` - Full compiled guide for agents (generated; do not edit by hand)
+- `metadata.json` - Organization/date/abstract consumed by the generator
+- `scripts/build-agents.mjs` - Generates the skill's `AGENTS.md` from the sources above
 
 ## Rules
 
@@ -61,7 +69,7 @@ and preserve strong repo conventions instead of mixing naming systems
 
 ## Creating a New Rule
 
-1. Create a new file in `rules/` using the appropriate prefix
+1. Create a new file in `skills/react-composition-structure/rules/` using the appropriate prefix
 2. Add frontmatter (`title`, `slug`, `group`, `groupNumber`, `section`,
   `impact`, optional `groupIntro`) so the generator can place and order it
 3. Use one main concern per rule file
@@ -70,8 +78,8 @@ and preserve strong repo conventions instead of mixing naming systems
   - bad and good examples
   - file trees or code snippets when helpful
   - practical exceptions or a checklist if the rule needs guardrails
-5. Add the rule to `SKILL.md` so the quick reference stays current
-6. Run `npm run build` to regenerate `AGENTS.md` from `rules/`
+5. Add the rule to `skills/react-composition-structure/SKILL.md` so the quick reference stays current
+6. Run `npm run build` to regenerate `skills/react-composition-structure/AGENTS.md` from `rules/`
 
 ## Prefix Guide
 

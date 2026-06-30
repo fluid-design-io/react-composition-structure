@@ -7,7 +7,11 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
-const rulesDir = join(root, "rules");
+// Shippable skill files live in skills/<name>/ so `npx skills add` vendors the
+// whole folder (SKILL.md + AGENTS.md + rules/). Build inputs (metadata.json,
+// templates/) stay at the repo root and are not vendored.
+const skillDir = join(root, "skills", "react-composition-structure");
+const rulesDir = join(skillDir, "rules");
 
 function githubSlug(text) {
   return text
@@ -98,5 +102,5 @@ const out =
     buildBody(rules),
   ].join("\n\n") + "\n";
 
-writeFileSync(join(root, "AGENTS.md"), out);
+writeFileSync(join(skillDir, "AGENTS.md"), out);
 console.log(`Generated AGENTS.md from ${rules.length} rules.`);
