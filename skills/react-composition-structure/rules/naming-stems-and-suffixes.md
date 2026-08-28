@@ -1,14 +1,14 @@
 ---
-title: Keep One Stem and Use Responsibility-Driven Suffixes
+title: Keep one stem and use responsibility-driven suffixes
 slug: naming-stems-and-suffixes
-group: Naming Stems and Suffixes
+group: Naming stems and suffixes
 groupNumber: 4
 section: "4.1"
 impact: MEDIUM
 tags: naming, conventions, suffixes
 ---
 
-## Keep One Stem and Use Responsibility-Driven Suffixes
+## Keep one stem and use responsibility-driven suffixes
 
 Naming should make ownership obvious before opening the file.
 
@@ -52,15 +52,19 @@ checkout/
 The stem rule applies per folder boundary. A nested folder (see
 `organization-nest-when-prefix-repeats.md`) resets the stem to the folder's own
 name: `checkout/billing/billing.form.tsx` is correct;
-`checkout/billing/checkout.billing.form.tsx` is not.
+`checkout/billing/checkout.billing.form.tsx` is not. Role folders reset the
+same way: `composer/layout/layout.close-button.tsx` (see
+`organization-group-by-role.md`).
 
 Useful suffixes:
 
-- `.screen.tsx` for route-facing screen surfaces
+- `.screen.tsx` for route-facing screens
 - `.page.tsx` for page-oriented repos
 - `.data.ts` for module-owned orchestration
 - `.types.ts` for shared types
 - `.context.tsx` for provider wiring
+- `.states.tsx` for self-gating state leaves (see
+`architecture-screen-blueprints.md`)
 - `.display.tsx` for read-oriented compound leaves
 - `.actions.tsx` for interactive compound leaves
 - `.utils.ts` for pure helpers

@@ -1,14 +1,14 @@
 ---
-title: Export One Module Root by Default
+title: Export one module root by default
 slug: boundaries-public-api
-group: Public API Boundaries
+group: Public API boundaries
 groupNumber: 3
 section: "3.1"
 impact: MEDIUM
 tags: public-api, exports, boundaries
 ---
 
-## Export One Module Root by Default
+## Export one module root by default
 
 For both shared components and route-bound module folders, export one module
 root by default. This keeps internal structure free to change without churn for
@@ -47,9 +47,9 @@ The same rule applies to compound components:
 export { Composer } from "./composer"
 ```
 
-The rule is not "always exactly one export" — it is "exports match intentional
-public entry points." One root is the default; screens become top-level
-exports when a module has two or more route surfaces (see
+The rule is not "always exactly one export". It is "exports match intentional
+public entry points". One root is the default; screens become top-level
+exports when a module has two or more screens (see
 `architecture-route-bound-module-folders.md`).
 
 Keep internal leaves internal unless they are intentionally designed as public
@@ -69,6 +69,6 @@ implicitly.
 **Checklist**
 
 - Does `index.ts` export only intentional public entry points (root by default,
-plus top-level screens when a module has two or more route surfaces)?
-- Are callers importing namespace surfaces instead of internal leaves?
+plus top-level screens when a module has two or more screens)?
+- Are callers importing the namespace instead of internal leaves?
 - Are exceptions intentional and documented?

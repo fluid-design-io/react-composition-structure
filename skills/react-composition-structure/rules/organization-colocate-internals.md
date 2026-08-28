@@ -1,14 +1,14 @@
 ---
-title: Colocate Internals Until a Second Consumer Appears
+title: Colocate internals until a second consumer appears
 slug: organization-colocate-internals
-group: Organization Heuristics
+group: Organization heuristics
 groupNumber: 5
-section: "5.2"
+section: "5.3"
 impact: MEDIUM
 tags: file-organization, colocation, refactoring
 ---
 
-## Colocate Internals Until a Second Consumer Appears
+## Colocate internals until a second consumer appears
 
 Module-owned helpers, data, and types belong next to the component that uses
 them. Keep tests in a module-local `__test__/` folder instead of scattering
@@ -36,8 +36,7 @@ Problems:
 
 - `lib/` advertises reuse that does not exist
 - refactoring `detail` now requires edits in an unrelated directory
-- later readers cannot tell what is genuinely shared from what was hoisted too
-early
+- later readers cannot tell shared code from code hoisted too early
 
 **Good: colocate until reuse is proven**
 
@@ -54,12 +53,12 @@ src/
         index.ts
 ```
 
-When a second domain module genuinely needs the helper, promote it then:
+When a second domain module actually imports the helper, promote it then:
 
 ```text
 src/
   lib/
-    format-date.ts          // now genuinely shared
+    format-date.ts          // now has two consumers
   screens/
     calendar/detail/...
     cart/...
@@ -67,9 +66,9 @@ src/
 
 **Rules of thumb**
 
-- one consumer → colocate
-- two consumers in the same module tree → lift to the nearest common parent
-- two or more consumers across unrelated domain modules → lift to `lib/` or
+- one consumer: colocate
+- two consumers in the same module tree: lift to the nearest common parent
+- two or more consumers across unrelated domain modules: lift to `lib/` or
 `shared/`
 - when nesting a subflow folder (see `organization-nest-when-prefix-repeats.md`),
 move data that is only consumed inside the subflow into a colocated `*.data.ts`;
@@ -87,7 +86,7 @@ and route-bound module folders (see
 `architecture-route-bound-module-folders.md`) both treat a folder as an
 ownership boundary. Colocation is the same idea applied to non-component code:
 the folder owns its internals and `index.ts` decides what leaks out. Together
-these rules make modules **movable** — a folder can be relocated or deleted as
+these rules make modules **movable**: a folder can be relocated or deleted as
 a unit without hunting for strays in shared directories.
 
 **Checklist**
@@ -96,4 +95,4 @@ a unit without hunting for strays in shared directories.
 - Do helpers, data, and types live next to their consumer, with tests in
 module-local `__test__/` folders?
 - When code is lifted, is it lifted to the nearest real common ancestor?
-- Is `lib/` or `shared/` reserved for code with genuine cross-module reuse?
+- Is `lib/` or `shared/` reserved for code that two or more modules import?

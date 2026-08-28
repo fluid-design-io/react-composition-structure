@@ -55,7 +55,7 @@ function buildToc(rules) {
       currentGroup = meta.groupNumber;
       const groupHeading = `${meta.groupNumber}. ${meta.group}`;
       lines.push(
-        `${groupHeading} — ${meta.impact}`.replace(
+        `${groupHeading} (${meta.impact})`.replace(
           groupHeading,
           `${meta.groupNumber}. [${meta.group}](#${githubSlug(groupHeading)})`
         )

@@ -1,25 +1,25 @@
 ---
-title: Use Module Folders for Route-Bound UI
+title: Use module folders for route-bound UI
 slug: architecture-route-bound-module-folders
-group: Route-Bound Module Folders
+group: Route-bound module folders
 groupNumber: 2
 section: "2.1"
 impact: HIGH
 tags: file-organization, module-folders, route-bound, data-orchestration
 ---
 
-## Use Module Folders for Route-Bound UI
+## Use module folders for route-bound UI
 
 Use a module folder when a page or screen owns real local complexity. *Feature*
-here means the domain surface you are restructuring — not a required `features/`
+here means the domain module you are restructuring, not a required `features/`
 parent directory. Place the folder wherever the repo already groups route-bound
 UI (`screens/`, `components/`, etc.).
 
-Signs the surface has grown enough:
+Signs the module has grown enough:
 
 - route UI plus several internal leaves
 - domain-specific query or mutation orchestration
-- multiple related route surfaces
+- multiple related screens
 - nested subflows within one module
 
 Do not force small pages or screens into folders.
@@ -57,15 +57,17 @@ checkout/
 File ownership:
 
 - `<feature>.tsx` assembles the public namespace when the module exposes a
-compound surface (2+ leaves, or 1 leaf plus shared state). A module that
+compound namespace (2+ leaves, or 1 leaf plus shared state). A module that
 only exposes screens and a single leaf can skip `<feature>.tsx` and export
 directly from `index.ts`.
-- `checkout.screen.tsx` owns the main route-facing UI
+- `checkout.screen.tsx` owns the main route-facing UI, kept as a
+declarative blueprint once render states multiply (see
+`architecture-screen-blueprints.md`)
 - `checkout.data.ts` owns module-local orchestration
 - leaf files such as `checkout.list.tsx` and `checkout.summary.tsx` own
 presentational sections
 - `index.ts` owns the public boundary (module root by default; top-level
-screen exports when a module has two or more route surfaces — see
+screen exports when a module has two or more screens, see
 **Multi-screen modules**)
 
 **Bad: route file owns domain orchestration**
@@ -97,14 +99,14 @@ export default function CheckoutRoute() {
 ```
 
 If the router requires params, read them in the route file and pass them into
-the module surface. Keep the rest of the orchestration inside the module.
+the module. Keep the rest of the orchestration inside the module.
 
 **Multi-screen modules**
 
-When a domain module has two or more route surfaces, export each screen as a
+When a domain module has two or more screens, export each screen as a
 top-level symbol from `index.ts` instead of namespacing them under the module
-root. Keep the module namespace reserved for genuinely shared compound leaves
-(for example `Faculty.Avatar`). A module with exactly one screen may still use
+root. Keep the module namespace reserved for shared compound leaves such as
+`Faculty.Avatar`. A module with exactly one screen may still use
 `Feature.Screen` for symmetry.
 
 ```text
@@ -123,8 +125,8 @@ export { FacultyDirectoryScreen } from "./faculty.directory.screen"
 export { FacultyDetailScreen } from "./faculty.detail.screen"
 ```
 
-The set of exports should map to the set of intentional public entry points —
-one root is the default, not a hard cap.
+The set of exports should map to the set of intentional public entry points.
+One root is the default, not a hard cap.
 
 **What belongs in `*.data.ts`**
 

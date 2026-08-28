@@ -1,14 +1,14 @@
 ---
-title: Use Compound Component Folders for Shared Multi-Part UI
+title: Use compound component folders for shared multi-part UI
 slug: architecture-compound-component-folders
-group: Component Folders
+group: Component folders
 groupNumber: 1
 section: "1.1"
 impact: HIGH
 tags: file-organization, compound-components, state-sharing
 ---
 
-## Use Compound Component Folders for Shared Multi-Part UI
+## Use compound component folders for shared multi-part UI
 
 Use a compound component folder when a shared component has:
 
@@ -160,10 +160,19 @@ function ForwardMessageDialog() {
 This is why context ownership belongs in the component-folder rule: it defines
 how shared UI folders map composition and state sharing into files.
 
+**Gates and nested namespaces**
+
+When several leaves' visibility depends on module state, add a
+`<stem>.states.tsx` of gates: leaves that read the context and return `null`
+unless their state holds. Consumers then compose states declaratively instead
+of branching. When one leaf grows named subparts, assemble a second-level
+namespace (`Composer.Header.Title`) with `Object.assign` in the leaf's own
+file. Both patterns are detailed in `architecture-screen-blueprints.md`.
+
 A module may own both a shared compound namespace and route-bound screens
-when the shared surface genuinely belongs to the same domain. Keep the compound
-namespace narrow (leaves only — no screens) and expose screens as top-level
-exports per `architecture-route-bound-module-folders.md`.
+when the shared component genuinely belongs to the same domain. Keep the
+compound namespace narrow (leaves only, no screens) and expose screens as
+top-level exports per `architecture-route-bound-module-folders.md`.
 
 **Checklist**
 

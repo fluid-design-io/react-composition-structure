@@ -1,19 +1,19 @@
 ---
-title: Nest Folders When Filename Prefixes Repeat
+title: Nest folders when filename prefixes repeat
 slug: organization-nest-when-prefix-repeats
-group: Organization Heuristics
+group: Organization heuristics
 groupNumber: 5
 section: "5.1"
 impact: MEDIUM
-groupIntro: "These rules describe *when* to move between layouts the earlier sections define. They are triggers, not new structures: apply them to decide when a flat layout should nest and when colocated code should be lifted."
+groupIntro: "These rules describe *when* to move between layouts the earlier sections define. They are triggers, not new structures: apply them to decide when a flat layout should nest, when peers should group, and when colocated code should be lifted."
 tags: file-organization, structure, refactoring
 ---
 
-## Nest Folders When Filename Prefixes Repeat
+## Nest folders when filename prefixes repeat
 
 A flat module that started with two or three files eventually grows into a
 dozen. Once multiple files share the same prefix, the prefix is no longer
-distinguishing information — it is noise.
+distinguishing information. It is noise.
 
 **Trigger:** three or more sibling files share the same leading stem (e.g.
 `calendar.detail.*`). Promote the shared prefix to a folder and give the folder
@@ -44,7 +44,7 @@ Problems:
 
 - the `detail` prefix is repeated in every filename with no structural payoff
 - `calendar.detail.*` and `calendar.*` interleave when sorted, hiding ownership
-- there is no public boundary — every file looks equally importable
+- there is no public boundary: every file looks equally importable
 - the `detail` subtree cannot be moved or deleted as a unit
 
 **Good: nest once the prefix repeats**
@@ -68,7 +68,7 @@ screens/
 
 The folder now carries the prefix. The files keep the sub-stem so intent stays
 legible both inside and outside the folder. `index.ts` becomes the public
-boundary (see `boundaries-public-api.md`) — internal leaves stay internal
+boundary (see `boundaries-public-api.md`); internal leaves stay internal
 unless intentionally exposed.
 
 **Naming stays mechanical**
@@ -90,10 +90,14 @@ guess where `Composer.Input` lives.
 - the shared prefix appears only twice and has no signs of growing
 - nesting would be purely aesthetic (keep symmetry for symmetry's sake out)
 
+When no prefix repeats but the flat listing has grown long anyway, that is
+the sibling trigger: group by role instead (see
+`organization-group-by-role.md`).
+
 **Barrel caveat**
 
 Subfolders may have a local `index.ts` only when they represent a real subflow
-with its own public surface consumed by parent siblings (the nested `detail/`
+with its own public API consumed by parent siblings (the nested `detail/`
 example above is such a case). Otherwise, imports inside the subfolder should
 reference files directly (`./detail.header`), and the module's root
 `index.ts` remains the sole public boundary.
@@ -103,5 +107,5 @@ reference files directly (`./detail.header`), and the module's root
 - Do three or more sibling files share the same leading stem?
 - Would promoting the stem to a folder collapse repetition without inventing
 new names?
-- Does the new folder expose only an intentional public surface via `index.ts`?
+- Does the new folder expose only an intentional public API via `index.ts`?
 - Is the sub-stem preserved on files inside the folder?
