@@ -205,6 +205,31 @@ function ForwardMessageDialog() {
 This is why context ownership belongs in the component-folder rule: it defines
 how shared UI folders map composition and state sharing into files.
 
+**Own the orchestration or accept it, never both**
+
+A provider either owns its query/session orchestration or accepts an
+already-running controller as its `value` — the dialog above injects one. The
+injected mode is what lets a second surface render the compound around a
+session it already owns; the embedded presentation must never start a
+duplicate session or query behind it. Keep that entry point intentional and
+named, not a fork hidden inside leaves.
+
+**Bad: a namespace bag that only aliases files**
+
+```tsx
+export const Requests = {
+  List: RequestsList,
+  Screen: RequestsScreen,
+}
+```
+
+If the parts share no state and no consumer composes them together, the
+object is a bag of exports wearing a namespace: callers still learn two
+implementation names, and the bag drags the screen into every import of the
+list. Export each part as a top-level symbol instead (see
+`architecture-route-bound-module-folders.md`) and reserve the namespace for
+parts that actually compose.
+
 **Gates and nested namespaces**
 
 When several leaves' visibility depends on module state, add a
@@ -309,18 +334,31 @@ export default function CheckoutRoute() {
 }
 ```
 
-**Good: route wrapper stays thin**
+**Good: the route file is a one-line re-export**
 
 ```tsx
-import { Checkout } from "@/screens/checkout"
-
-export default function CheckoutRoute() {
-  return <Checkout.Screen />
-}
+export { CheckoutScreen as default } from "@/screens/checkout"
 ```
 
-If the router requires params, read them in the route file and pass them into
-the module. Keep the rest of the orchestration inside the module.
+In a file-based router (Expo Router, Next.js), the route file is a manifest
+entry: a pointer into the module, not a home for code. The screen stays in
+the module so the module stays movable, and so several route files can name
+the same screen (a catch-all plus its bare segment, a modal and a push
+presentation). A registration-based router (React Navigation stacks) makes
+the same shape a one-line screen registration in a navigator.
+
+**Params belong to the module**
+
+The module reads and parses its own route params inside its context or data
+file; that is what keeps the route file at one line. When parsing is
+nontrivial (amounts, composite ids), colocate the parse helpers in a
+`*.params.ts`.
+
+A route file earns a body only for route-only concerns: static options the
+router reads at build time, route-group chrome, a platform quirk. Route-only
+knowledge (why this URL exists at all, such as a catch-all segment that
+cannot match the bare path) lives as a doc comment in the route file. It is
+routing knowledge, not screen knowledge, and it has nowhere else to go.
 
 **Multi-screen modules**
 
@@ -392,7 +430,9 @@ Create nested folders for real subflows, not symmetry.
 
 - Is a flat route file still enough?
 - Does the module have one obvious home?
-- Is route wiring thin?
+- Is the route file a one-line re-export, or does its body own a route-only
+concern?
+- Does the module read and parse its own params?
 - Is module-owned orchestration colocated in `*.data.ts`?
 - Do nested folders represent real subflows?
 
@@ -407,6 +447,10 @@ each subtree decides for itself.
 
 Gates and blueprints are pure React. Nothing here touches a platform API, so
 the pattern is identical in React DOM and React Native.
+
+The route file above a blueprint stays a one-line re-export. The module, not
+the router tree, is the blueprint's home (see
+`architecture-route-bound-module-folders.md`).
 
 **Bad: the screen owns the branching**
 
@@ -477,6 +521,35 @@ A gate owns one visibility rule and states it once. Sibling gates may be
 exclusive (offline vs. ready) or stacked (an error banner above a stale list).
 Either way the blueprint shows the full set without a single conditional.
 
+**Bad: gates in name, props in practice**
+
+```tsx
+export function PayLinkScreen() {
+  const status = usePayLinkStatus(url)
+
+  return (
+    <Screen>
+      <PayLinkOffline status={status} />
+      <PayLinkLoading status={status} />
+      <PayLinkReady status={status} data={status.data} onClaim={claim} />
+    </Screen>
+  )
+}
+```
+
+Handing every gate the same state bag keeps the orchestration in the screen
+in disguise: the file still reads data, still knows every gate's inputs, and
+adding a state edits two files. Give the gates a provider and let each read
+the module context; the blueprint goes back to naming states only.
+
+**Decide precedence once**
+
+With three or more states, do not let each gate re-derive precedence from
+query booleans (`isOffline && !isPending && …` restated per gate). Derive one
+discriminated status in the provider — `'offline' | 'loading' | 'error' |
+'ready'` — and let each gate test it. Precedence then lives in one derivation
+instead of being reconstructed, slightly differently, in every gate.
+
 **Notes attach to the subtree they govern**
 
 A blueprint has no logic to read, so the design intent moves into doc
@@ -534,7 +607,11 @@ A screen with one state and no gates is just a screen. Add
 
 - Can every state the screen can be in be read off the blueprint?
 - Does each gate read context and decide its own visibility?
-- Is the screen file free of data reads, conditionals, and layout logic?
+- Do gates read module context rather than a props bag the screen assembles?
+- Is state precedence derived once as a discriminated status, not restated
+per gate?
+- Is the screen file free of data reads, router reads, conditionals, and
+layout logic?
 - Do design notes sit on the exact subtree they govern?
 - Are second-level parts nested namespaces in the leaf's file, not new files?
 
@@ -587,6 +664,15 @@ exports when a module has two or more screens (see
 Keep internal leaves internal unless they are intentionally designed as public
 entrypoints.
 
+**Exports are proven by consumers**
+
+Every export is a claim that a consumer exists. When restructuring an
+existing barrel, audit the claim: search for each symbol outside the module.
+An export nobody imports is not public API — delete it during the refactor
+rather than carrying it into the new boundary. Barrels accumulate dead
+exports because exporting once felt harmless; the restructure is the moment
+that debt gets paid, not preserved.
+
 **Reasonable exceptions**
 
 Export additional symbols only when they are truly part of the public contract:
@@ -603,6 +689,7 @@ implicitly.
 - Does `index.ts` export only intentional public entry points (root by default,
 plus top-level screens when a module has two or more screens)?
 - Are callers importing the namespace instead of internal leaves?
+- Has every export kept through a refactor been proven by a consumer search?
 - Are exceptions intentional and documented?
 
 ## 4. Naming stems and suffixes
@@ -655,11 +742,20 @@ name: `checkout/billing/billing.form.tsx` is correct;
 same way: `composer/layout/layout.close-button.tsx` (see
 `organization-group-by-role.md`).
 
+**Stems never cross module boundaries**
+
+A module's files and component names carry that module's stem, never a
+sibling's. `PayLinkState*` components inside `pay-share-link/` make every
+search for either stem land in two modules, and read as one module's
+internals living in the other. Renaming to the owning stem is part of any
+refactor that touches the file, not polish to defer.
+
 Useful suffixes:
 
 - `.screen.tsx` for route-facing screens
 - `.page.tsx` for page-oriented repos
 - `.data.ts` for module-owned orchestration
+- `.params.ts` for module-owned route-param parsing
 - `.types.ts` for shared types
 - `.context.tsx` for provider wiring
 - `.states.tsx` for self-gating state leaves (see
@@ -685,6 +781,7 @@ Consistency matters more than whether the repo chooses kebab-case or PascalCase.
 **Checklist**
 
 - Do all module-owned files share a stem?
+- Do component names carry this module's stem rather than a sibling's?
 - Does each suffix communicate one clear responsibility?
 - Are generic names like `helpers.ts` or `stuff.ts` avoided?
 - Is the repo's existing naming system being preserved when it is already coherent?
@@ -773,6 +870,14 @@ guess where `Composer.Input` lives.
 - the folder would contain only one or two files
 - the shared prefix appears only twice and has no signs of growing
 - nesting would be purely aesthetic (keep symmetry for symmetry's sake out)
+
+Count the folder the refactor produces, not the folder you start with: a
+two-file cluster that the same plan grows into a compound (provider, gates,
+screen) already meets the trigger. Tests move with their cluster into its
+`__test__/` but do not count toward the trigger. Inside a module already past
+the role-folder length trigger, a two-file cluster that is a real owned seam
+may still nest — name that reason in the plan or commit so the below-trigger
+fold reads as a decision, not drift.
 
 When no prefix repeats but the flat listing has grown long anyway, that is
 the sibling trigger: group by role instead (see

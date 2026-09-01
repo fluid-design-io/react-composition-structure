@@ -3,7 +3,7 @@ name: react-composition-structure
 description: React and React Native file-system architecture patterns that scale. Use when restructuring component folders or route-bound domain modules (a calendar, cart, or checkout module under `components/`, `screens/`, or any repo tree, not a literal `features/` directory), composing screens as blueprints with `*.states.tsx` state gates, grouping long flat modules into role folders, cleaning up `index.ts` export boundaries, normalizing naming conventions, colocating `*.data.ts` files, or translating composition patterns into repo structure.
 metadata:
   author: oliverpan
-  version: 1.1.0
+  version: 1.3.0
 ---
 
 # React Composition Structure
@@ -71,8 +71,9 @@ state sharing
 ### 2. Route-bound module folders (HIGH)
 
 - `architecture-route-bound-module-folders`: Organize pages and screens into
-foldered domain modules (wherever the repo groups route-bound UI) with thin
-route wrappers and colocated `*.data.ts`
+foldered domain modules (wherever the repo groups route-bound UI) with
+one-line route re-exports, module-owned param parsing, and colocated
+`*.data.ts`
 - `architecture-screen-blueprints`: Compose screens as declarative
 blueprints of gates and leaves, with self-gating `*.states.tsx` files and
 design notes on the subtree they govern

@@ -160,6 +160,31 @@ function ForwardMessageDialog() {
 This is why context ownership belongs in the component-folder rule: it defines
 how shared UI folders map composition and state sharing into files.
 
+**Own the orchestration or accept it, never both**
+
+A provider either owns its query/session orchestration or accepts an
+already-running controller as its `value` — the dialog above injects one. The
+injected mode is what lets a second surface render the compound around a
+session it already owns; the embedded presentation must never start a
+duplicate session or query behind it. Keep that entry point intentional and
+named, not a fork hidden inside leaves.
+
+**Bad: a namespace bag that only aliases files**
+
+```tsx
+export const Requests = {
+  List: RequestsList,
+  Screen: RequestsScreen,
+}
+```
+
+If the parts share no state and no consumer composes them together, the
+object is a bag of exports wearing a namespace: callers still learn two
+implementation names, and the bag drags the screen into every import of the
+list. Export each part as a top-level symbol instead (see
+`architecture-route-bound-module-folders.md`) and reserve the namespace for
+parts that actually compose.
+
 **Gates and nested namespaces**
 
 When several leaves' visibility depends on module state, add a

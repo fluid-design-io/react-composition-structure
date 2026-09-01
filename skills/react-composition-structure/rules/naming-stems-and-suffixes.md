@@ -56,11 +56,20 @@ name: `checkout/billing/billing.form.tsx` is correct;
 same way: `composer/layout/layout.close-button.tsx` (see
 `organization-group-by-role.md`).
 
+**Stems never cross module boundaries**
+
+A module's files and component names carry that module's stem, never a
+sibling's. `PayLinkState*` components inside `pay-share-link/` make every
+search for either stem land in two modules, and read as one module's
+internals living in the other. Renaming to the owning stem is part of any
+refactor that touches the file, not polish to defer.
+
 Useful suffixes:
 
 - `.screen.tsx` for route-facing screens
 - `.page.tsx` for page-oriented repos
 - `.data.ts` for module-owned orchestration
+- `.params.ts` for module-owned route-param parsing
 - `.types.ts` for shared types
 - `.context.tsx` for provider wiring
 - `.states.tsx` for self-gating state leaves (see
@@ -86,6 +95,7 @@ Consistency matters more than whether the repo chooses kebab-case or PascalCase.
 **Checklist**
 
 - Do all module-owned files share a stem?
+- Do component names carry this module's stem rather than a sibling's?
 - Does each suffix communicate one clear responsibility?
 - Are generic names like `helpers.ts` or `stuff.ts` avoided?
 - Is the repo's existing naming system being preserved when it is already coherent?

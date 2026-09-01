@@ -55,6 +55,15 @@ exports when a module has two or more screens (see
 Keep internal leaves internal unless they are intentionally designed as public
 entrypoints.
 
+**Exports are proven by consumers**
+
+Every export is a claim that a consumer exists. When restructuring an
+existing barrel, audit the claim: search for each symbol outside the module.
+An export nobody imports is not public API — delete it during the refactor
+rather than carrying it into the new boundary. Barrels accumulate dead
+exports because exporting once felt harmless; the restructure is the moment
+that debt gets paid, not preserved.
+
 **Reasonable exceptions**
 
 Export additional symbols only when they are truly part of the public contract:
@@ -71,4 +80,5 @@ implicitly.
 - Does `index.ts` export only intentional public entry points (root by default,
 plus top-level screens when a module has two or more screens)?
 - Are callers importing the namespace instead of internal leaves?
+- Has every export kept through a refactor been proven by a consumer search?
 - Are exceptions intentional and documented?

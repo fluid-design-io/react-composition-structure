@@ -90,6 +90,14 @@ guess where `Composer.Input` lives.
 - the shared prefix appears only twice and has no signs of growing
 - nesting would be purely aesthetic (keep symmetry for symmetry's sake out)
 
+Count the folder the refactor produces, not the folder you start with: a
+two-file cluster that the same plan grows into a compound (provider, gates,
+screen) already meets the trigger. Tests move with their cluster into its
+`__test__/` but do not count toward the trigger. Inside a module already past
+the role-folder length trigger, a two-file cluster that is a real owned seam
+may still nest — name that reason in the plan or commit so the below-trigger
+fold reads as a decision, not drift.
+
 When no prefix repeats but the flat listing has grown long anyway, that is
 the sibling trigger: group by role instead (see
 `organization-group-by-role.md`).

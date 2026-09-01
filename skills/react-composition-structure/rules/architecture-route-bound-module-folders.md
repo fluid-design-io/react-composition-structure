@@ -88,18 +88,31 @@ export default function CheckoutRoute() {
 }
 ```
 
-**Good: route wrapper stays thin**
+**Good: the route file is a one-line re-export**
 
 ```tsx
-import { Checkout } from "@/screens/checkout"
-
-export default function CheckoutRoute() {
-  return <Checkout.Screen />
-}
+export { CheckoutScreen as default } from "@/screens/checkout"
 ```
 
-If the router requires params, read them in the route file and pass them into
-the module. Keep the rest of the orchestration inside the module.
+In a file-based router (Expo Router, Next.js), the route file is a manifest
+entry: a pointer into the module, not a home for code. The screen stays in
+the module so the module stays movable, and so several route files can name
+the same screen (a catch-all plus its bare segment, a modal and a push
+presentation). A registration-based router (React Navigation stacks) makes
+the same shape a one-line screen registration in a navigator.
+
+**Params belong to the module**
+
+The module reads and parses its own route params inside its context or data
+file; that is what keeps the route file at one line. When parsing is
+nontrivial (amounts, composite ids), colocate the parse helpers in a
+`*.params.ts`.
+
+A route file earns a body only for route-only concerns: static options the
+router reads at build time, route-group chrome, a platform quirk. Route-only
+knowledge (why this URL exists at all, such as a catch-all segment that
+cannot match the bare path) lives as a doc comment in the route file. It is
+routing knowledge, not screen knowledge, and it has nowhere else to go.
 
 **Multi-screen modules**
 
@@ -171,6 +184,8 @@ Create nested folders for real subflows, not symmetry.
 
 - Is a flat route file still enough?
 - Does the module have one obvious home?
-- Is route wiring thin?
+- Is the route file a one-line re-export, or does its body own a route-only
+concern?
+- Does the module read and parse its own params?
 - Is module-owned orchestration colocated in `*.data.ts`?
 - Do nested folders represent real subflows?

@@ -20,6 +20,10 @@ each subtree decides for itself.
 Gates and blueprints are pure React. Nothing here touches a platform API, so
 the pattern is identical in React DOM and React Native.
 
+The route file above a blueprint stays a one-line re-export. The module, not
+the router tree, is the blueprint's home (see
+`architecture-route-bound-module-folders.md`).
+
 **Bad: the screen owns the branching**
 
 ```tsx
@@ -89,6 +93,35 @@ A gate owns one visibility rule and states it once. Sibling gates may be
 exclusive (offline vs. ready) or stacked (an error banner above a stale list).
 Either way the blueprint shows the full set without a single conditional.
 
+**Bad: gates in name, props in practice**
+
+```tsx
+export function PayLinkScreen() {
+  const status = usePayLinkStatus(url)
+
+  return (
+    <Screen>
+      <PayLinkOffline status={status} />
+      <PayLinkLoading status={status} />
+      <PayLinkReady status={status} data={status.data} onClaim={claim} />
+    </Screen>
+  )
+}
+```
+
+Handing every gate the same state bag keeps the orchestration in the screen
+in disguise: the file still reads data, still knows every gate's inputs, and
+adding a state edits two files. Give the gates a provider and let each read
+the module context; the blueprint goes back to naming states only.
+
+**Decide precedence once**
+
+With three or more states, do not let each gate re-derive precedence from
+query booleans (`isOffline && !isPending && …` restated per gate). Derive one
+discriminated status in the provider — `'offline' | 'loading' | 'error' |
+'ready'` — and let each gate test it. Precedence then lives in one derivation
+instead of being reconstructed, slightly differently, in every gate.
+
 **Notes attach to the subtree they govern**
 
 A blueprint has no logic to read, so the design intent moves into doc
@@ -146,6 +179,10 @@ A screen with one state and no gates is just a screen. Add
 
 - Can every state the screen can be in be read off the blueprint?
 - Does each gate read context and decide its own visibility?
-- Is the screen file free of data reads, conditionals, and layout logic?
+- Do gates read module context rather than a props bag the screen assembles?
+- Is state precedence derived once as a discriminated status, not restated
+per gate?
+- Is the screen file free of data reads, router reads, conditionals, and
+layout logic?
 - Do design notes sit on the exact subtree they govern?
 - Are second-level parts nested namespaces in the leaf's file, not new files?
