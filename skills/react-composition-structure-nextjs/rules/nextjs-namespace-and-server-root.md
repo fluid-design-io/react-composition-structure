@@ -128,6 +128,11 @@ before.
 The file starts with `import "server-only"`. It holds the module's data
 functions, including the ones marked `"use cache"`.
 
+Write the import even when `server-only` is not in `package.json`. Next.js
+handles the import itself and does not read the npm package, so the build
+passes without it. Offer to install the package only when the repo's linter
+flags the import as an undeclared dependency.
+
 Server Actions live in `<stem>.functions.ts`, which starts with
 `"use server"`. Do not name that file `<stem>.actions.ts`. In the shared
 suffix list `.actions.tsx` means interactive leaves, and two meanings for one
@@ -143,4 +148,4 @@ word cost every reader a second look.
 
 **Official docs:** `server-and-client-components` (Passing data from Server
 to Client Components, Interleaving Server and Client Components, Context
-providers), `use-client`, `use-cache` (Serialization), `data-security`.
+providers, Preventing environment poisoning), `use-client`, `use-cache` (Serialization), `data-security`.

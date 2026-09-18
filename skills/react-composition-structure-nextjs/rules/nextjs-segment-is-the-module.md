@@ -29,7 +29,10 @@ app/
       checkout.list.tsx
 ```
 
-Naming, nesting, and role folders follow the shared rules. Folders inside a
+Naming, nesting, and role folders follow the shared rules. That includes
+the shared rule's ban on a role folder named `components/`, which would
+produce `components/components.benefit-row.tsx`. Name the folder for what
+its files are, such as `rows/`, or keep the files flat. Folders inside a
 segment take no underscore prefix. Images, fonts, stylesheets, and metadata
 image files stay in the segment under their own names.
 
@@ -66,6 +69,12 @@ common segment, such as `app/faculty/faculty.avatar.tsx` for
 share UI. Put it outside `app/`, in `components/<domain>/`, as a compound
 component folder with an `index.ts`.
 
+That form fits UI with one root and its parts. Sections that share a domain
+and nothing else, such as the marketing sections of several landing pages,
+are peers of one kind. Put them flat in `components/<domain>/` with no
+`index.ts`, and import each file by its path. A barrel there would load
+every section for a page that renders one.
+
 Name `components/<domain>/` for what the UI is, such as
 `components/marketing/`. A folder named after screens would hold no screens
 and would mislead the next reader about where screens live.
@@ -83,5 +92,7 @@ from `(shop)/checkout` to `(account)/checkout`.
 - Is the segment root free of `index.ts`?
 - Do shared files sit in the nearest common segment, or in
 `components/<domain>/` when no close segment exists?
+- Does `components/<domain>/` have an `index.ts` only when it holds one
+compound component?
 
 **Official docs:** `project-structure` (Colocation, Route groups).

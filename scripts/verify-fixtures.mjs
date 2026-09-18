@@ -44,6 +44,7 @@ function verifyNext() {
     "◐ /orders/1",
     "◐ /posts/[slug]",
     "○ /posts/hello",
+    "○ /terms",
   ];
   check("next: colocated module files add no routes", routes.length === expected.length);
   for (const route of expected) check(`next: route table has "${route}"`, routes.includes(route));
@@ -55,6 +56,7 @@ function verifyNext() {
   check("next: streamed content stays out of the shell", !html("orders/[id].html").includes("Card reader"));
   check("next: layout metadata re-exported from posts.layout.metadata.ts", html("posts/hello.html").includes("<title>Hello | Journal</title>"));
   check("next: a provider-free async root renders server leaves", html("posts/hello.html").includes("First post."));
+  check("next: a cached page moved whole into terms.tsx prerenders with no boundary", html("terms.html").includes("Cached terms body."));
   check("next: a boundary passed into a static section keeps the section in the shell", html("benefits.html").includes("pricing-frame") && html("benefits.html").includes("price-skeleton") && !html("benefits.html").includes("Price for"));
 }
 

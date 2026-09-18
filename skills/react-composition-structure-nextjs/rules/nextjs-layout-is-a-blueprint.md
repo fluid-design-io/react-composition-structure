@@ -48,9 +48,17 @@ that check, or wrapping it in `<Suspense>`, can change what it guarantees.
 Leave it where it is, tell the user what you found, and ask how they want it
 handled. The official docs cover where such checks belong.
 
+**A root layout that awaits the locale stays async**
+
+A root layout that awaits the locale to set `<html lang>` cannot go sync.
+The attribute is on the outermost element, so no child component can take
+the await. Keep that one await in the layout and move every other read out
+of it.
+
 **Checklist**
 
-- Is the layout sync, with `children` rendered unconditionally?
+- Is the layout sync, or async only for the `<html lang>` await, with
+`children` rendered unconditionally?
 - Is every boundary in the layout written in the layout?
 - Does layout metadata live in `<stem>.layout.metadata.ts`?
 - Did every access check stay where it was, with the user told about it?

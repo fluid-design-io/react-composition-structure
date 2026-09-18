@@ -50,7 +50,10 @@ app/
       checkout.list.tsx
 ```
 
-Naming, nesting, and role folders follow the shared rules. Folders inside a
+Naming, nesting, and role folders follow the shared rules. That includes
+the shared rule's ban on a role folder named `components/`, which would
+produce `components/components.benefit-row.tsx`. Name the folder for what
+its files are, such as `rows/`, or keep the files flat. Folders inside a
 segment take no underscore prefix. Images, fonts, stylesheets, and metadata
 image files stay in the segment under their own names.
 
@@ -87,6 +90,12 @@ common segment, such as `app/faculty/faculty.avatar.tsx` for
 share UI. Put it outside `app/`, in `components/<domain>/`, as a compound
 component folder with an `index.ts`.
 
+That form fits UI with one root and its parts. Sections that share a domain
+and nothing else, such as the marketing sections of several landing pages,
+are peers of one kind. Put them flat in `components/<domain>/` with no
+`index.ts`, and import each file by its path. A barrel there would load
+every section for a page that renders one.
+
 Name `components/<domain>/` for what the UI is, such as
 `components/marketing/`. A folder named after screens would hold no screens
 and would mislead the next reader about where screens live.
@@ -104,6 +113,8 @@ from `(shop)/checkout` to `(account)/checkout`.
 - Is the segment root free of `index.ts`?
 - Do shared files sit in the nearest common segment, or in
 `components/<domain>/` when no close segment exists?
+- Does `components/<domain>/` have an `index.ts` only when it holds one
+compound component?
 
 **Official docs:** `project-structure` (Colocation, Route groups).
 
@@ -140,12 +151,26 @@ The page never awaits. It passes `params` and `searchParams` down as the
 promises it received, and the module's root awaits them. An `await` at the
 top of a page blocks the whole route from prerendering.
 
+A page that awaits only for a translation function, such as
+`getTranslations` from `next-intl`, moves that call into the sections that
+use the strings. Each section becomes an async Server Component and the page
+goes sync. Keep the same function. Do not swap it for another API.
+
+**A check that guards access stays in the page**
+
+A page that awaits a session and calls `redirect()`, `unauthorized()`, or
+`notFound()` is doing security work. Moving that check into a root can change
+what it guarantees. Leave it where it is, even though the page stays async.
+Tell the user what you found and ask how they want it handled. Layouts
+follow the same rule (see `nextjs-layout-is-a-blueprint.md`).
+
 **Routing exports come from `<stem>.metadata.ts`**
 
 `generateMetadata`, `generateStaticParams`, `metadata`, and `viewport` live
 in `<stem>.metadata.ts`. `page.tsx` re-exports them in one line. Do this for
-every page, including pages where the metadata is three lines long, so every
-`page.tsx` reads the same way. Segment config that Next.js reads as a literal
+every page that has a routing export, including pages where the metadata is three
+lines long, so every `page.tsx` reads the same way. A page with no routing
+exports gets no metadata file. An empty file tells the reader nothing. Segment config that Next.js reads as a literal
 (`instant`, `prefetch`, `runtime`) stays in `page.tsx`.
 
 **A static page is a list of sections**
@@ -167,6 +192,12 @@ export default function BenefitsPage() {
 }
 ```
 
+**A page that is itself cached**
+
+Some pages mark their default export with `"use cache"` and read no request
+data. Move that function whole into `<stem>.tsx`, with its directive, and
+render it from a sync `page.tsx`. Do not split it and do not add a boundary.
+
 **The one exception is a screen that two routes share**
 
 When two routes render the same screen, put the blueprint in
@@ -182,11 +213,14 @@ export { LandingScreen as default } from "@/components/marketing"
 
 - Does `page.tsx` hold only imports, one re-export line, and one tree?
 - Is the page component sync, with `params` passed down as a promise?
-- Do routing exports live in `<stem>.metadata.ts`?
+- Did every access check stay where it was, with the user told about it?
+- Do routing exports live in `<stem>.metadata.ts`, with no empty metadata
+file?
 - Does the file have zero conditionals and zero data reads?
 
 **Official docs:** `page` (params, searchParams), `generate-metadata`,
-`migrating-to-cache-components`.
+`migrating-to-cache-components`, `use-cache`, `data-security`,
+`authentication`.
 
 ### 1.3 The blueprint shows what streams
 
@@ -258,6 +292,27 @@ skeleton that mirrors the page layout.
 - `loading.tsx` is the router's boundary for the whole segment. When a
 segment has one, do not add a module skeleton for the same state.
 
+**When the task must not change what streams**
+
+A new `<Suspense>` changes what the route sends first. A task that only
+moves files may not do that. When the old page awaits outside any boundary,
+make the page sync, move the await into the async root, and add no boundary
+around the root. A boundary that the old page had further down stays where
+it is in the tree. The page then shows one root with no fallback, which is
+how the route already behaved.
+
+Tell the user which routes ended this way, because each one still blocks on
+its root. Do the same with anything else the task did not ask you to fix,
+such as an import that climbs two levels. Report it and leave it.
+
+**A skeleton that is one element still gets its file**
+
+When the fallback is a single generic element, such as
+`<Skeleton className="h-96" />`, still write `<stem>.skeleton.tsx` and attach
+it as `.Skeleton`. Every fallback in every page then reads
+`<Orders.Skeleton />`, and a reader never has to ask whether an inline
+fallback belongs to the module.
+
 Where a boundary goes, what to cache, and what to prefetch are rendering
 decisions. The official Next.js docs and skills decide them. This rule only
 says that the result is written in `page.tsx`.
@@ -265,7 +320,10 @@ says that the result is written in `page.tsx`.
 **Checklist**
 
 - Is every `<Suspense>` in the route written in `page.tsx`?
-- Is each fallback the wrapped module's `.Skeleton`?
+- Is each fallback the wrapped module's `.Skeleton`, even when it is one
+element?
+- If the task may not change what streams, did you add no boundary and tell
+the user which roots still block?
 - Do the heading and other static parts sit above the boundaries?
 
 **Official docs:** `instant-navigation`, `migrating-to-cache-components`,
@@ -391,6 +449,11 @@ before.
 The file starts with `import "server-only"`. It holds the module's data
 functions, including the ones marked `"use cache"`.
 
+Write the import even when `server-only` is not in `package.json`. Next.js
+handles the import itself and does not read the npm package, so the build
+passes without it. Offer to install the package only when the repo's linter
+flags the import as an undeclared dependency.
+
 Server Actions live in `<stem>.functions.ts`, which starts with
 `"use server"`. Do not name that file `<stem>.actions.ts`. In the shared
 suffix list `.actions.tsx` means interactive leaves, and two meanings for one
@@ -406,7 +469,7 @@ word cost every reader a second look.
 
 **Official docs:** `server-and-client-components` (Passing data from Server
 to Client Components, Interleaving Server and Client Components, Context
-providers), `use-client`, `use-cache` (Serialization), `data-security`.
+providers, Preventing environment poisoning), `use-client`, `use-cache` (Serialization), `data-security`.
 
 ### 1.5 Use gates for client state and variants for server state
 
@@ -531,9 +594,17 @@ that check, or wrapping it in `<Suspense>`, can change what it guarantees.
 Leave it where it is, tell the user what you found, and ask how they want it
 handled. The official docs cover where such checks belong.
 
+**A root layout that awaits the locale stays async**
+
+A root layout that awaits the locale to set `<html lang>` cannot go sync.
+The attribute is on the outermost element, so no child component can take
+the await. Keep that one await in the layout and move every other read out
+of it.
+
 **Checklist**
 
-- Is the layout sync, with `children` rendered unconditionally?
+- Is the layout sync, or async only for the `<html lang>` await, with
+`children` rendered unconditionally?
 - Is every boundary in the layout written in the layout?
 - Does layout metadata live in `<stem>.layout.metadata.ts`?
 - Did every access check stay where it was, with the user told about it?

@@ -78,6 +78,27 @@ skeleton that mirrors the page layout.
 - `loading.tsx` is the router's boundary for the whole segment. When a
 segment has one, do not add a module skeleton for the same state.
 
+**When the task must not change what streams**
+
+A new `<Suspense>` changes what the route sends first. A task that only
+moves files may not do that. When the old page awaits outside any boundary,
+make the page sync, move the await into the async root, and add no boundary
+around the root. A boundary that the old page had further down stays where
+it is in the tree. The page then shows one root with no fallback, which is
+how the route already behaved.
+
+Tell the user which routes ended this way, because each one still blocks on
+its root. Do the same with anything else the task did not ask you to fix,
+such as an import that climbs two levels. Report it and leave it.
+
+**A skeleton that is one element still gets its file**
+
+When the fallback is a single generic element, such as
+`<Skeleton className="h-96" />`, still write `<stem>.skeleton.tsx` and attach
+it as `.Skeleton`. Every fallback in every page then reads
+`<Orders.Skeleton />`, and a reader never has to ask whether an inline
+fallback belongs to the module.
+
 Where a boundary goes, what to cache, and what to prefetch are rendering
 decisions. The official Next.js docs and skills decide them. This rule only
 says that the result is written in `page.tsx`.
@@ -85,7 +106,10 @@ says that the result is written in `page.tsx`.
 **Checklist**
 
 - Is every `<Suspense>` in the route written in `page.tsx`?
-- Is each fallback the wrapped module's `.Skeleton`?
+- Is each fallback the wrapped module's `.Skeleton`, even when it is one
+element?
+- If the task may not change what streams, did you add no boundary and tell
+the user which roots still block?
 - Do the heading and other static parts sit above the boundaries?
 
 **Official docs:** `instant-navigation`, `migrating-to-cache-components`,

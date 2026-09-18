@@ -90,6 +90,8 @@ export default function OrdersPage({ params }: PageProps<"/orders/[id]">) {
 ```
 
 - The page is sync. It passes `params` down as a promise and never awaits.
+The one page that stays async is a page with an access check, which you
+leave alone and report.
 - The page holds the whole tree. No `<stem>.screen.tsx` exists unless two
 routes share the screen.
 - Every `<Suspense>` is in the page, with the module's `.Skeleton` as the
@@ -102,6 +104,9 @@ provider and keeps everything else. The page still wraps the async root in
 props.
 - Only a page that reads no request data at all drops `<Suspense>`. It is a
 list of server components.
+- A task that only moves files adds no `<Suspense>`. A root that had no
+boundary before gets none now, and you tell the user which roots still
+block.
 
 These rules cover `page.tsx`, `layout.tsx`, and the files beside them. They
 do not cover parallel route slots, intercepting routes, route handlers,
@@ -120,11 +125,11 @@ when the route has more than one state, and rule 1.6 before you touch a
 | Rule | Covers |
 | --- | --- |
 | 1.1 `nextjs-segment-is-the-module` | Module files sit in the route segment, with no `index.ts`. Where shared UI goes |
-| 1.2 `nextjs-page-is-the-blueprint` | A sync `page.tsx` that holds the tree, passes `params` down as a promise, and re-exports routing exports from `<stem>.metadata.ts` |
-| 1.3 `nextjs-blueprint-shows-topology` | Every `<Suspense>` is written in `page.tsx`, with the module's `.Skeleton` as the fallback |
+| 1.2 `nextjs-page-is-the-blueprint` | A sync `page.tsx` that holds the tree, passes `params` down as a promise, and re-exports routing exports from `<stem>.metadata.ts`. Pages that await translations, guard access, or are cached whole |
+| 1.3 `nextjs-blueprint-shows-topology` | Every `<Suspense>` is written in `page.tsx`, with the module's `.Skeleton` as the fallback. What to do when the task must not change what streams |
 | 1.4 `nextjs-namespace-and-server-root` | A namespace file with no `"use client"`, an async root that seeds a client provider, client leaves by default |
 | 1.5 `nextjs-states-gates-and-variants` | Gates for browser state, early returns for nothing-to-show, `<stem>.variants.tsx` for server-decided screens |
-| 1.6 `nextjs-layout-is-a-blueprint` | A sync layout that holds the chrome, `<stem>.layout.metadata.ts`, and access checks that stay where they are |
+| 1.6 `nextjs-layout-is-a-blueprint` | A sync layout that holds the chrome, `<stem>.layout.metadata.ts`, access checks that stay where they are, and the root layout that awaits the locale |
 
 Suffixes this skill adds to the shared list: `.metadata.ts`, `.layout.metadata.ts`,
 `.skeleton.tsx`, `.variants.tsx`.

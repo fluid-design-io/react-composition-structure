@@ -78,7 +78,7 @@ dash, or an arrow character.
 npm run verify
 ```
 
-Installs and builds both fixtures, then checks 22 claims. Examples are that
+Installs and builds both fixtures, then checks 24 claims. Examples are that
 colocated files add no Next.js routes, that a re-exported `generateMetadata`
 sets the title, and that the TanStack generator turns an empty stem-dotted
 file into a live route. Run it when a framework ships a major version.
