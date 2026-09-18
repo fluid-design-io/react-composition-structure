@@ -96,13 +96,26 @@ routes share the screen.
 fallback.
 - `orders.tsx` has no `"use client"`. Its async root awaits `params`, reads
 data, and passes plain data to the client provider.
-- A page with no request data is a list of server components, with no
-provider and no `<Suspense>`.
+- A route that reads request data and has no client state drops the
+provider and keeps everything else. The page still wraps the async root in
+`<Suspense>` with its `.Skeleton`, and the root renders server leaves with
+props.
+- Only a page that reads no request data at all drops `<Suspense>`. It is a
+list of server components.
+
+These rules cover `page.tsx`, `layout.tsx`, and the files beside them. They
+do not cover parallel route slots, intercepting routes, route handlers,
+`template.tsx`, or `default.tsx`. When a task needs one of those, or when a
+route does not fit the shapes above, follow the shared skill. Describe the
+case, offer options, and ask the user where the files should go. Do not bend
+the route to match the example, and do not import from another segment to
+make it work.
 
 ## Rules
 
 Read rules 1.1 to 1.4 before you add or restructure a route. Read rule 1.5
-when the route has more than one state.
+when the route has more than one state, and rule 1.6 before you touch a
+`layout.tsx`.
 
 | Rule | Covers |
 | --- | --- |
@@ -111,9 +124,10 @@ when the route has more than one state.
 | 1.3 `nextjs-blueprint-shows-topology` | Every `<Suspense>` is written in `page.tsx`, with the module's `.Skeleton` as the fallback |
 | 1.4 `nextjs-namespace-and-server-root` | A namespace file with no `"use client"`, an async root that seeds a client provider, client leaves by default |
 | 1.5 `nextjs-states-gates-and-variants` | Gates for browser state, early returns for nothing-to-show, `<stem>.variants.tsx` for server-decided screens |
+| 1.6 `nextjs-layout-is-a-blueprint` | A sync layout that holds the chrome, `<stem>.layout.metadata.ts`, and access checks that stay where they are |
 
-Suffixes this skill adds to the shared list: `.metadata.ts`, `.skeleton.tsx`,
-`.variants.tsx`.
+Suffixes this skill adds to the shared list: `.metadata.ts`, `.layout.metadata.ts`,
+`.skeleton.tsx`, `.variants.tsx`.
 
 Verified against Next.js 16.3 with `cacheComponents: true`. `fixtures/next/`
 in the source repo builds every rule in one app.

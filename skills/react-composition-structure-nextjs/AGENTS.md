@@ -25,6 +25,7 @@ skills own rendering, caching, and prefetching, and they win any conflict.
   - 1.3 [The blueprint shows what streams](#13-the-blueprint-shows-what-streams)
   - 1.4 [Assemble the namespace on the server and seed a client provider](#14-assemble-the-namespace-on-the-server-and-seed-a-client-provider)
   - 1.5 [Use gates for client state and variants for server state](#15-use-gates-for-client-state-and-variants-for-server-state)
+  - 1.6 [layout.tsx is a blueprint of chrome](#16-layouttsx-is-a-blueprint-of-chrome)
 
 ## 1. Next.js App Router
 
@@ -49,13 +50,33 @@ app/
       checkout.list.tsx
 ```
 
-The segment name is the module stem. Naming, nesting, and role folders follow
-the shared rules. Folders inside a segment take no underscore prefix.
+Naming, nesting, and role folders follow the shared rules. Folders inside a
+segment take no underscore prefix. Images, fonts, stylesheets, and metadata
+image files stay in the segment under their own names.
 
-**A segment has no `index.ts`**
+**Choosing the stem**
 
-`page.tsx` is the module's only consumer and it imports with relative paths.
-A barrel would serve nobody.
+The stem is the name of the nearest static segment. Three cases need more:
+
+- A dynamic segment such as `[id]`, or a route group such as `(shop)`, has
+no name of its own. Use the nearest static segment above it.
+- A list route and its detail route would then share a stem. Give the detail
+route the singular, so `posts/page.tsx` uses `posts` and
+`posts/[slug]/page.tsx` uses `post`.
+- A segment name that says little alone, or that repeats elsewhere in the
+repo, such as `settings` or `app`, takes its parent as a prefix, as in
+`account-settings`.
+
+The root page has no segment name. Propose `home` or the name the team
+already uses. When two stems both look reasonable, propose one and ask the
+user. A stem is cheap to pick and costly to rename later.
+
+**The segment root has no `index.ts`**
+
+`page.tsx` is the module's only consumer and it imports with relative paths,
+so a barrel at the segment root would serve nobody. A subflow folder inside
+the segment follows the shared rule and may have an `index.ts` that its
+parent consumes as a unit.
 
 **Where shared UI goes**
 
@@ -78,9 +99,9 @@ from `(shop)/checkout` to `(account)/checkout`.
 
 **Checklist**
 
-- Do the module's files sit beside `page.tsx`, with the segment name as the
-stem?
-- Is the segment free of `index.ts`?
+- Do the module's files sit beside `page.tsx` and share one stem?
+- Did you ask the user when the stem was not obvious?
+- Is the segment root free of `index.ts`?
 - Do shared files sit in the nearest common segment, or in
 `components/<domain>/` when no close segment exists?
 
@@ -209,9 +230,25 @@ The page reads as if the history were static.
 </main>
 ```
 
+**A boundary deep inside a static section**
+
+When the streamed part sits inside static markup, the section takes
+`children` and the page passes the boundary in:
+
+```tsx
+<BenefitsPricing>
+  <Suspense fallback={<Price.Skeleton />}>
+    <Price />
+  </Suspense>
+</BenefitsPricing>
+```
+
+The section stays static, and the page still shows what streams.
+
 **Rules for boundaries**
 
-- A leaf never wraps itself in `<Suspense>`.
+- A leaf never wraps itself in `<Suspense>` or in an error boundary. Both
+are written in the page.
 - Each boundary wraps one async component. Two reads get two boundaries.
 - Anything that renders the same in the fallback and the result goes above
 the boundary. The page heading always does.
@@ -312,17 +349,60 @@ context. Make a leaf a Server Component when it is large and static, such as
 a rich-text body. That leaf takes the same `params` promise as the root and
 calls the same cached function in `<stem>.server.ts`.
 
+**A route with no client state needs no provider**
+
+Many dynamic routes only read data and render it. Such a route has no
+context, so its leaves cannot be prop-less. `<stem>.tsx` holds one async
+root that awaits `params`, reads data, and renders Server Component leaves
+with props:
+
+```tsx
+// post.tsx
+async function PostRoot({ params }: { params: Promise<{ slug: string }> }) {
+  const post = await getPost((await params).slug)
+  if (!post) notFound()
+
+  return (
+    <article>
+      <PostHeader title={post.title} author={post.author} />
+      <PostBody content={post.content} />
+    </article>
+  )
+}
+
+export const Post = Object.assign(PostRoot, { Skeleton: PostSkeleton })
+```
+
+The page is unchanged. It still wraps the root in a boundary, because the
+root still awaits:
+
+```tsx
+<Suspense fallback={<Post.Skeleton />}>
+  <Post params={params} />
+</Suspense>
+```
+
+The page shows where the route streams. The root shows what the route is
+made of. Add a provider when the first piece of client state appears, not
+before.
+
 **Server-only code lives in `<stem>.server.ts`**
 
 The file starts with `import "server-only"`. It holds the module's data
 functions, including the ones marked `"use cache"`.
+
+Server Actions live in `<stem>.functions.ts`, which starts with
+`"use server"`. Do not name that file `<stem>.actions.ts`. In the shared
+suffix list `.actions.tsx` means interactive leaves, and two meanings for one
+word cost every reader a second look.
 
 **Checklist**
 
 - Is `<stem>.tsx` free of `"use client"`?
 - Does the root pass only serializable data to the provider?
 - Does the client provider create `actions`?
-- Is each Server Component leaf large and static?
+- Is each Server Component leaf under a provider large and static?
+- Does a route with no client state skip the provider?
 
 **Official docs:** `server-and-client-components` (Passing data from Server
 to Client Components, Interleaving Server and Client Components, Context
@@ -339,6 +419,10 @@ form.
 | the browser: offline, an optimistic update, a refetch, an open panel | a gate | `<stem>.states.tsx` |
 | server data, and there is nothing to show: not found, empty, not entitled | an early return in the root, or `notFound()` | `<stem>.tsx` |
 | server data, and each state is a different screen | explicit variants | `<stem>.variants.tsx` |
+
+A `notFound()` call inside a streamed root runs after the shell has started
+to send. Read the `not-found` doc for what that does to the response status
+before you rely on it, and ask the user if the route needs a real 404.
 
 **Variants**
 
@@ -406,3 +490,52 @@ screens?
 
 **Official docs:** `server-and-client-components` (Interleaving Server and
 Client Components), `data-security`, `not-found`.
+
+### 1.6 layout.tsx is a blueprint of chrome
+
+A layout follows the page rules. It is a sync component that holds one tree,
+the chrome around `children`. It renders `children` unconditionally.
+
+```tsx
+export { metadata } from "./shop.layout.metadata"
+
+export default function ShopLayout({ children }: LayoutProps<"/shop">) {
+  return (
+    <div>
+      <ShopHeader />
+      <Suspense fallback={<ShopCart.Skeleton />}>
+        <ShopCart />
+      </Suspense>
+      {children}
+      <ShopFooter />
+    </div>
+  )
+}
+```
+
+**Where a layout's files go**
+
+Files that only the layout uses sit in the layout's segment and carry its
+stem. Chrome that several layouts share lives in `components/<domain>/`.
+
+**Layout metadata has its own file**
+
+A layout re-exports its routing exports from `<stem>.layout.metadata.ts`.
+The page in the same segment keeps `<stem>.metadata.ts`, so the two never
+collide.
+
+**Do not move a check that guards access**
+
+A layout that awaits a session and redirects is doing security work. Moving
+that check, or wrapping it in `<Suspense>`, can change what it guarantees.
+Leave it where it is, tell the user what you found, and ask how they want it
+handled. The official docs cover where such checks belong.
+
+**Checklist**
+
+- Is the layout sync, with `children` rendered unconditionally?
+- Is every boundary in the layout written in the layout?
+- Does layout metadata live in `<stem>.layout.metadata.ts`?
+- Did every access check stay where it was, with the user told about it?
+
+**Official docs:** `layout`, `data-security`, `authentication`.

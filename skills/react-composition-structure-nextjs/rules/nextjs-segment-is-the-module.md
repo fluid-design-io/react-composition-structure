@@ -29,13 +29,33 @@ app/
       checkout.list.tsx
 ```
 
-The segment name is the module stem. Naming, nesting, and role folders follow
-the shared rules. Folders inside a segment take no underscore prefix.
+Naming, nesting, and role folders follow the shared rules. Folders inside a
+segment take no underscore prefix. Images, fonts, stylesheets, and metadata
+image files stay in the segment under their own names.
 
-**A segment has no `index.ts`**
+**Choosing the stem**
 
-`page.tsx` is the module's only consumer and it imports with relative paths.
-A barrel would serve nobody.
+The stem is the name of the nearest static segment. Three cases need more:
+
+- A dynamic segment such as `[id]`, or a route group such as `(shop)`, has
+no name of its own. Use the nearest static segment above it.
+- A list route and its detail route would then share a stem. Give the detail
+route the singular, so `posts/page.tsx` uses `posts` and
+`posts/[slug]/page.tsx` uses `post`.
+- A segment name that says little alone, or that repeats elsewhere in the
+repo, such as `settings` or `app`, takes its parent as a prefix, as in
+`account-settings`.
+
+The root page has no segment name. Propose `home` or the name the team
+already uses. When two stems both look reasonable, propose one and ask the
+user. A stem is cheap to pick and costly to rename later.
+
+**The segment root has no `index.ts`**
+
+`page.tsx` is the module's only consumer and it imports with relative paths,
+so a barrel at the segment root would serve nobody. A subflow folder inside
+the segment follows the shared rule and may have an `index.ts` that its
+parent consumes as a unit.
 
 **Where shared UI goes**
 
@@ -58,9 +78,9 @@ from `(shop)/checkout` to `(account)/checkout`.
 
 **Checklist**
 
-- Do the module's files sit beside `page.tsx`, with the segment name as the
-stem?
-- Is the segment free of `index.ts`?
+- Do the module's files sit beside `page.tsx` and share one stem?
+- Did you ask the user when the stem was not obvious?
+- Is the segment root free of `index.ts`?
 - Do shared files sit in the nearest common segment, or in
 `components/<domain>/` when no close segment exists?
 

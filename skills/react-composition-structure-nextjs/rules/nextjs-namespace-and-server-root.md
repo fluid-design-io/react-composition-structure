@@ -86,17 +86,60 @@ context. Make a leaf a Server Component when it is large and static, such as
 a rich-text body. That leaf takes the same `params` promise as the root and
 calls the same cached function in `<stem>.server.ts`.
 
+**A route with no client state needs no provider**
+
+Many dynamic routes only read data and render it. Such a route has no
+context, so its leaves cannot be prop-less. `<stem>.tsx` holds one async
+root that awaits `params`, reads data, and renders Server Component leaves
+with props:
+
+```tsx
+// post.tsx
+async function PostRoot({ params }: { params: Promise<{ slug: string }> }) {
+  const post = await getPost((await params).slug)
+  if (!post) notFound()
+
+  return (
+    <article>
+      <PostHeader title={post.title} author={post.author} />
+      <PostBody content={post.content} />
+    </article>
+  )
+}
+
+export const Post = Object.assign(PostRoot, { Skeleton: PostSkeleton })
+```
+
+The page is unchanged. It still wraps the root in a boundary, because the
+root still awaits:
+
+```tsx
+<Suspense fallback={<Post.Skeleton />}>
+  <Post params={params} />
+</Suspense>
+```
+
+The page shows where the route streams. The root shows what the route is
+made of. Add a provider when the first piece of client state appears, not
+before.
+
 **Server-only code lives in `<stem>.server.ts`**
 
 The file starts with `import "server-only"`. It holds the module's data
 functions, including the ones marked `"use cache"`.
+
+Server Actions live in `<stem>.functions.ts`, which starts with
+`"use server"`. Do not name that file `<stem>.actions.ts`. In the shared
+suffix list `.actions.tsx` means interactive leaves, and two meanings for one
+word cost every reader a second look.
 
 **Checklist**
 
 - Is `<stem>.tsx` free of `"use client"`?
 - Does the root pass only serializable data to the provider?
 - Does the client provider create `actions`?
-- Is each Server Component leaf large and static?
+- Is each Server Component leaf under a provider large and static?
+- Does a route with no client state skip the provider?
 
 **Official docs:** `server-and-client-components` (Passing data from Server
 to Client Components, Interleaving Server and Client Components, Context

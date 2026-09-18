@@ -17,6 +17,26 @@ Official framework docs and official framework skills own engineering
 practice, such as rendering, caching, and data fetching. When they contradict
 a rule here, follow them and tell the user what conflicted.
 
+## When the rules do not cover a case
+
+These rules come from a few codebases. Yours will have shapes they did not
+foresee. When no rule fits, or two rules disagree, do not invent a rule and do
+not stretch one to fit. Stop on that file, describe the case to the user in
+two or three lines, offer the options you see with the one you recommend, and
+ask. Carry on with work the question does not block.
+
+You have left the rules when any of these is true:
+
+- You are using a framework feature or file convention that no rule names.
+- You are about to import from inside another module's folder, or write a
+relative import that climbs more than one level.
+- A second consumer needs a module that a rule told you to keep private.
+- You cannot answer a rule's checklist question with a plain yes.
+
+Leave folders that a tool generates or owns as they are. Examples are a UI
+kit's generated component folder, a CMS admin route, and generated types. Ask
+before you restructure anything you did not expect to find.
+
 ## Start here: find the router
 
 Module shape is the same under every router. Module placement is not. Before

@@ -20,6 +20,10 @@ form.
 | server data, and there is nothing to show: not found, empty, not entitled | an early return in the root, or `notFound()` | `<stem>.tsx` |
 | server data, and each state is a different screen | explicit variants | `<stem>.variants.tsx` |
 
+A `notFound()` call inside a streamed root runs after the shell has started
+to send. Read the `not-found` doc for what that does to the response status
+before you rely on it, and ask the user if the route needs a real 404.
+
 **Variants**
 
 When server data picks between different screens, write each screen as its

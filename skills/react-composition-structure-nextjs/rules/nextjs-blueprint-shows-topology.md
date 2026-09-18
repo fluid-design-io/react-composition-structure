@@ -50,9 +50,25 @@ The page reads as if the history were static.
 </main>
 ```
 
+**A boundary deep inside a static section**
+
+When the streamed part sits inside static markup, the section takes
+`children` and the page passes the boundary in:
+
+```tsx
+<BenefitsPricing>
+  <Suspense fallback={<Price.Skeleton />}>
+    <Price />
+  </Suspense>
+</BenefitsPricing>
+```
+
+The section stays static, and the page still shows what streams.
+
 **Rules for boundaries**
 
-- A leaf never wraps itself in `<Suspense>`.
+- A leaf never wraps itself in `<Suspense>` or in an error boundary. Both
+are written in the page.
 - Each boundary wraps one async component. Two reads get two boundaries.
 - Anything that renders the same in the fallback and the result goes above
 the boundary. The page heading always does.

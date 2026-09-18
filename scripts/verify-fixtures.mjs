@@ -36,12 +36,14 @@ function verifyNext() {
 
   const expected = [
     "○ /_not-found",
-    "○ /benefits",
+    "◐ /benefits",
     "◐ /invite/[token]",
     "○ /invite/new",
     "○ /invite/old",
     "◐ /orders/[id]",
     "◐ /orders/1",
+    "◐ /posts/[slug]",
+    "○ /posts/hello",
   ];
   check("next: colocated module files add no routes", routes.length === expected.length);
   for (const route of expected) check(`next: route table has "${route}"`, routes.includes(route));
@@ -51,6 +53,9 @@ function verifyNext() {
   check("next: metadata re-exported from benefits.metadata.ts", html("benefits.html").includes("<title>Benefits</title>"));
   check("next: static shell holds the heading and the skeleton", html("orders/1.html").includes("Your order") && html("orders/1.html").includes("orders-skeleton"));
   check("next: streamed content stays out of the shell", !html("orders/[id].html").includes("Card reader"));
+  check("next: layout metadata re-exported from posts.layout.metadata.ts", html("posts/hello.html").includes("<title>Hello | Journal</title>"));
+  check("next: a provider-free async root renders server leaves", html("posts/hello.html").includes("First post."));
+  check("next: a boundary passed into a static section keeps the section in the shell", html("benefits.html").includes("pricing-frame") && html("benefits.html").includes("price-skeleton") && !html("benefits.html").includes("Price for"));
 }
 
 function verifyTanstack() {
