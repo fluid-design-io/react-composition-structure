@@ -1,126 +1,123 @@
 ---
 name: react-composition-structure
-description: React and React Native file-system architecture patterns that scale. Use when restructuring component folders or route-bound domain modules (a calendar, cart, or checkout module under `components/`, `screens/`, or any repo tree, not a literal `features/` directory), composing screens as blueprints with `*.states.tsx` state gates, grouping long flat modules into role folders, cleaning up `index.ts` export boundaries, normalizing naming conventions, colocating `*.data.ts` files, or translating composition patterns into repo structure.
+description: File and folder structure for React and React Native codebases. Use when restructuring a component folder or a route-bound domain module (a calendar, cart, or checkout module), composing a screen as a blueprint with `*.states.tsx` gates, grouping a long flat module into role folders, cleaning up `index.ts` exports, normalizing file names, colocating `*.data.ts` files, or deciding where a screen's module sits relative to its route file.
 metadata:
   author: oliverpan
-  version: 1.3.0
+  version: 2.0.0
 ---
 
-# React Composition Structure
+# React composition structure
 
-File-system and module-boundary patterns for React and React Native codebases.
-This skill complements `vercel-composition-patterns`: Vercel explains the
-component architecture; this skill explains how to express those patterns in a
-codebase's folders, files, exports, and naming.
+These rules say where React files live, how to name them, and how a screen
+file reads. They complement Vercel's `composition-patterns` skill. That skill
+explains component architecture. This one puts it into folders, files,
+exports, and names.
 
-## Primitives
+Official framework docs and official framework skills own engineering
+practice, such as rendering, caching, and data fetching. When they contradict
+a rule here, follow them and tell the user what conflicted.
 
-The rules share a small platform-neutral vocabulary. Nothing in it touches a
-platform API, so each pattern applies to React DOM and React Native alike.
-Examples pick whichever platform reads clearest and translate 1:1.
+## When the rules do not cover a case
 
-- **Root**: the provider-wrapping component a module's namespace hangs off
-- **Leaf**: one named part consumers compose (`Composer.Input`)
+These rules come from a few codebases. Yours will have shapes they did not
+foresee. When no rule fits, or two rules disagree, do not invent a rule and do
+not stretch one to fit. Stop on that file, describe the case to the user in
+two or three lines, offer the options you see with the one you recommend, and
+ask. Carry on with work the question does not block.
+
+You have left the rules when any of these is true:
+
+- You are using a framework feature or file convention that no rule names.
+- You are about to import from inside another module's folder, or write a
+relative import that climbs more than one level.
+- A second consumer needs a module that a rule told you to keep private.
+- You cannot answer a rule's checklist question with a plain yes.
+
+Leave folders that a tool generates or owns as they are. Examples are a UI
+kit's generated component folder, a CMS admin route, and generated types. Ask
+before you restructure anything you did not expect to find.
+
+## Start here: find the router
+
+Module shape is the same under every router. Module placement is not. Before
+you create or move a route-bound module, find the nearest `package.json`
+above the file you are editing and match its dependency and its files:
+
+| Dependency and files | Read next |
+| --- | --- |
+| `expo-router`, and `app/_layout.tsx` | `../react-composition-structure-expo/SKILL.md` |
+| `next`, and `app/**/page.tsx` | `../react-composition-structure-nextjs/SKILL.md` |
+| `@tanstack/react-start` or `@tanstack/react-router`, and `routeTree.gen.ts` | `../react-composition-structure-tanstack-start/SKILL.md` |
+| anything else | `rules/placement-separate-tree.md` |
+
+If the skill in the table is not installed, stop and give the user this
+command, with the skill's folder name in place of `<name>`:
+
+```bash
+npx skills add fluid-design-io/react-composition-structure --skill <name>
+```
+
+Before you create or move a file, state the placement and the evidence for
+each package in one line.
+
+Modules that the package already places consistently override the table. An
+explicit placement request from the user overrides both. When a request names
+a placement that differs from the detected one, such as "use the same
+`screens/` setup in every app", tell the user in one line that it differs,
+and say which placement you will use, before you write a file. Never
+reinterpret the request in silence. `rules/placement-detect-router.md` has the
+full procedure, including monorepos.
+
+Work on shared components under `components/` needs no router. Skip this
+section for it.
+
+## Vocabulary
+
+- **Root**: the component that wraps the provider and carries the module's
+namespace
+- **Leaf**: one named part that consumers compose, such as `Composer.Input`
 - **Gate**: a leaf that reads module context and returns `null` unless its
-state holds; lives in `<stem>.states.tsx`
-- **Nested namespace**: a leaf with named subparts, assembled with
-`Object.assign` in the leaf's own file (`Activity.Header.Address`)
-- **Blueprint**: a screen file that is nothing but a declarative tree of
-leaves and gates, with design notes as doc comments on the subtree they govern
-- **Subflow folder**: a nested folder owning a real flow, with its own
+state holds. Gates live in `<stem>.states.tsx`
+- **Nested namespace**: a leaf with named parts, assembled with
+`Object.assign` in the leaf's own file, such as `Activity.Header.Address`
+- **Blueprint**: a screen file that contains one declarative tree of leaves
+and gates, with design notes as doc comments on the subtree they explain
+- **Subflow folder**: a nested folder that owns a flow and has its own
 public API
-- **Role folder**: a nested folder shelving peers of one kind (`layout/`),
-with no local barrel
+- **Role folder**: a nested folder that holds peers of one kind, such as
+`layout/`, with no `index.ts`
 
 ## Scaling ladder
 
-Structure is a response to measured growth, not ceremony. Each step names the
-rule to read when its trigger fires:
+Add structure when a trigger fires, not before.
 
-1. **One file.** A small presentational component stays flat; no folder.
-2. **Compound folder.** Multiple named leaves or shared state. Read
+1. **One file.** A small presentational component stays flat.
+2. **Compound folder.** Several named leaves, or shared state. Read
 `architecture-compound-component-folders`.
-3. **Gates and blueprint.** A second render state appears. Add
-`<stem>.states.tsx` and keep screens declarative. Read
+3. **Gates.** A second render state appears. Add `<stem>.states.tsx`. Read
 `architecture-screen-blueprints`.
-4. **Nested namespace.** A leaf grows named subparts. Assemble them in the
-leaf's own file; same rule file as step 3.
-5. **Subflow folder.** Three or more files share a sub-prefix. Read
+4. **Nested namespace.** A leaf grows named parts. Same rule as step 3.
+5. **Subflow folder.** Three or more files share a prefix. Read
 `organization-nest-when-prefix-repeats`.
-6. **Role folder.** The flat listing passes about a dozen files with no
-repeating prefix. Read `organization-group-by-role`.
+6. **Role folder.** The flat listing passes about a dozen files and no prefix
+repeats. Read `organization-group-by-role`.
 
-## When to apply
+## Rules
 
-Reference these guidelines when:
+Read the one rule file that matches the job. Each is in `rules/`.
 
-- Restructuring reusable component folders
-- Refactoring pages or screens into route-bound domain modules
-- Cleaning up over-exported `index.ts` files
-- Normalizing naming conventions across a module
-- Deciding where context, data orchestration, and docs should live
+| Rule | Covers |
+| --- | --- |
+| `architecture-compound-component-folders` | One folder and one namespace for shared multi-part UI, with a `state`, `actions`, `meta` context contract |
+| `architecture-route-bound-module-folders` | Module folders for pages and screens, thin route files, module-owned params, `<stem>.data.ts` |
+| `architecture-screen-blueprints` | Screens as declarative trees, gates, design notes on the subtree |
+| `placement-detect-router` | Deciding placement from workspace evidence |
+| `placement-separate-tree` | The default placement, with a one-line route entry |
+| `boundaries-public-api` | One exported root, and exports that a consumer proves |
+| `naming-stems-and-suffixes` | One stem per folder and one suffix per job |
+| `organization-nest-when-prefix-repeats` | When to nest a folder |
+| `organization-group-by-role` | When to add role folders |
+| `organization-colocate-internals` | When to lift helpers, data, and types |
 
-## Quick reference
-
-### 1. Component folders (HIGH)
-
-- `architecture-compound-component-folders`: Organize shared multi-part
-components around one root namespace, clear file ownership, and provider-led
-state sharing
-
-### 2. Route-bound module folders (HIGH)
-
-- `architecture-route-bound-module-folders`: Organize pages and screens into
-foldered domain modules (wherever the repo groups route-bound UI) with
-one-line route re-exports, module-owned param parsing, and colocated
-`*.data.ts`
-- `architecture-screen-blueprints`: Compose screens as declarative
-blueprints of gates and leaves, with self-gating `*.states.tsx` files and
-design notes on the subtree they govern
-
-### 3. Public API boundaries (MEDIUM)
-
-- `boundaries-public-api`: Export one module root by default and keep leaves
-internal unless they are intentionally public
-
-### 4. Naming stems and suffixes (MEDIUM)
-
-- `naming-stems-and-suffixes`: Keep one module stem, use explicit suffixes, and
-preserve strong repo conventions instead of mixing naming systems
-
-### 5. Organization heuristics (MEDIUM)
-
-- `organization-nest-when-prefix-repeats`: Promote repeated filename prefixes
-into a nested folder with an `index.ts` public boundary once 3+ files share
-the stem
-- `organization-group-by-role`: Group peer leaves into role folders
-(`layout/`, `widgets/`) once a flat module passes about a dozen files with no
-repeating prefix; no local barrel, root `index.ts` stays the boundary
-- `organization-colocate-internals`: Keep helpers/data/types with their
-consumer, and tests in module-local `__test__/` folders, until a second
-consumer proves the need to lift
-
-## How to use
-
-Read the single rule file that matches the job:
-
-```text
-rules/architecture-compound-component-folders.md
-rules/boundaries-public-api.md
-```
-
-Each rule file contains:
-
-- A single main concern
-- Why it matters
-- Bad and good examples
-- File trees or code samples
-- Practical exceptions and checklists
-
-## Full compiled document
-
-For the complete guide with all rules expanded: `AGENTS.md`.
-
-`AGENTS.md` is generated from `rules/*.md` (plus `metadata.json` and
-`templates/agents.head.md`). Edit the rule files, then run `npm run build` to
-regenerate it. Never edit `AGENTS.md` by hand.
+`AGENTS.md` holds every rule in one document. The build generates it from
+`rules/`. Never edit it by hand.

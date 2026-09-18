@@ -5,94 +5,61 @@ group: Organization heuristics
 groupNumber: 5
 section: "5.3"
 impact: MEDIUM
-tags: file-organization, colocation, refactoring
+tags: colocation, shared-code, tests, heuristics
 ---
 
 ## Colocate internals until a second consumer appears
 
-Module-owned helpers, data, and types belong next to the component that uses
-them. Keep tests in a module-local `__test__/` folder instead of scattering
-test files across the module root. Lifting code into a shared `lib/`,
-`shared/`, or `utils/` location before a second consumer exists creates the
-illusion of reuse and weakens ownership.
+Helpers, data, and types live next to the component that uses them. Tests
+live in a `__test__/` folder inside the same module.
 
-**Trigger:** a second consumer actually imports the helper. Until then,
-colocate.
+**Trigger:** a second consumer imports the helper. Until then, keep it where
+it is.
 
-**Bad: extracted before a second consumer exists**
+**Bad: lifted before a second consumer exists**
 
 ```text
-src/
-  lib/
-    format-date.ts          // used only by calendar.detail
-    detail-utils.ts         // used only by calendar.detail
-  screens/
-    calendar/
-      detail/
-        detail.header.tsx   // imports from ../../../lib/format-date
+lib/
+  format-date.ts            // only calendar/detail imports this
+  detail-utils.ts           // only calendar/detail imports this
+calendar/
+  detail/
+    detail.header.tsx       // imports ../../lib/format-date
 ```
 
-Problems:
+`lib/` now claims reuse that does not exist. A change to `detail` edits an
+unrelated directory, and a later reader cannot tell shared code from code
+lifted too early.
 
-- `lib/` advertises reuse that does not exist
-- refactoring `detail` now requires edits in an unrelated directory
-- later readers cannot tell shared code from code hoisted too early
-
-**Good: colocate until reuse is proven**
+**Good: colocated**
 
 ```text
-src/
-  screens/
-    calendar/
-      detail/
-        detail.header.tsx
-        detail.utils.ts     // format-date lives here
-        detail.data.ts
-        __test__/
-          detail.header.test.tsx
-        index.ts
+calendar/
+  detail/
+    detail.header.tsx
+    detail.utils.ts         // format-date lives here
+    detail.data.ts
+    __test__/
+      detail.header.test.tsx
+    index.ts
 ```
 
-When a second domain module actually imports the helper, promote it then:
+**Where code goes as consumers appear**
 
-```text
-src/
-  lib/
-    format-date.ts          // now has two consumers
-  screens/
-    calendar/detail/...
-    cart/...
-```
+- one consumer: next to it
+- two consumers in one module tree: the nearest common parent folder
+- consumers in unrelated modules: `lib/` or `shared/`
+- data only a subflow reads: the subflow's own `<stem>.data.ts`
+- data the root module and a subflow both read: the module-level
+`<stem>.data.ts`
+- types used inside one folder: that folder's `<stem>.types.ts`
+- types that cross a folder boundary: exported through `index.ts`
 
-**Rules of thumb**
-
-- one consumer: colocate
-- two consumers in the same module tree: lift to the nearest common parent
-- two or more consumers across unrelated domain modules: lift to `lib/` or
-`shared/`
-- when nesting a subflow folder (see `organization-nest-when-prefix-repeats.md`),
-move data that is only consumed inside the subflow into a colocated `*.data.ts`;
-data consumed by both the root module and the subflow stays in the module-level
-`*.data.ts` until a second consumer proves it should split
-- tests live in `__test__/` within the same module
-(`detail/__test__/detail.header.test.tsx`)
-- types used only inside a folder stay in `*.types.ts` within that folder;
-types crossing a folder boundary are exported via `index.ts`
-
-**Why this pairs with the earlier rules**
-
-Compound component folders (see `architecture-compound-component-folders.md`)
-and route-bound module folders (see
-`architecture-route-bound-module-folders.md`) both treat a folder as an
-ownership boundary. Colocation is the same idea applied to non-component code:
-the folder owns its internals and `index.ts` decides what leaks out. Together
-these rules make modules **movable**: a folder can be relocated or deleted as
-a unit without hunting for strays in shared directories.
+You can move or delete a module that owns all its internals as one folder.
 
 **Checklist**
 
-- Does a second consumer actually exist before lifting the helper?
-- Do helpers, data, and types live next to their consumer, with tests in
-module-local `__test__/` folders?
-- When code is lifted, is it lifted to the nearest real common ancestor?
-- Is `lib/` or `shared/` reserved for code that two or more modules import?
+- Does a second consumer exist before you lift a helper?
+- Do helpers, data, types, and tests sit with their consumer?
+- Did lifted code go to the nearest common parent?
+- Does `lib/` hold only code that two or more modules import?

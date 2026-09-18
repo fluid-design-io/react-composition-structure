@@ -1,13 +1,19 @@
 {
-  "name": "react-composition-structure",
-  "version": "1.3.0",
+  "version": "2.0.0",
   "organization": "Engineering",
-  "date": "August 2026",
-  "abstract": "File-system and module-boundary patterns for React and React Native codebases. Expresses composition patterns as folders, file ownership, export boundaries, and naming so structure does not drift into monolithic files or bag-of-exports modules as the codebase scales.",
-  "references": [
-    "https://react.dev",
-    "https://react.dev/learn/passing-data-deeply-with-context",
-    "https://react.dev/reference/react/use",
-    "https://heroui.com/docs/react/getting-started/composition"
-  ]
+  "date": "September 2026",
+  "skills": {
+    "react-composition-structure": {
+      "title": "React Composition Structure"
+    },
+    "react-composition-structure-nextjs": {
+      "title": "React Composition Structure for Next.js"
+    },
+    "react-composition-structure-expo": {
+      "title": "React Composition Structure for Expo Router"
+    },
+    "react-composition-structure-tanstack-start": {
+      "title": "React Composition Structure for TanStack Start"
+    }
+  }
 }

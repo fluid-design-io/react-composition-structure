@@ -10,21 +10,22 @@ tags: file-organization, module-folders, route-bound, data-orchestration
 
 ## Use module folders for route-bound UI
 
-Use a module folder when a page or screen owns real local complexity. *Feature*
-here means the domain module you are restructuring, not a required `features/`
-parent directory. Place the folder wherever the repo already groups route-bound
-UI (`screens/`, `components/`, etc.).
-
-Signs the module has grown enough:
+Give a page or screen a module folder when it has any of these:
 
 - route UI plus several internal leaves
-- domain-specific query or mutation orchestration
-- multiple related screens
-- nested subflows within one module
+- its own query or mutation orchestration
+- several related screens
+- nested subflows
 
-Do not force small pages or screens into folders.
+A small page stays one flat file. *Feature* in this guide means the domain
+module being restructured (checkout, calendar, cart). It does not mean a
+`features/` directory.
 
-**Bad: domain logic scattered across unrelated globals**
+This rule covers the module's shape. Where the folder sits relative to the
+route file depends on the router. Run `placement-detect-router.md` before you
+create or move a module. The trees below have no parent directory on purpose.
+
+**Bad: domain logic spread across global folders**
 
 ```text
 checkout.tsx
@@ -37,40 +38,27 @@ helpers.ts
 
 Problems:
 
-- the module has no obvious home
+- the module has no single home
 - data logic drifts into generic hook folders
-- route wrappers tend to accumulate orchestration
+- the route file collects orchestration
 
-**Good: one colocated module folder with thin route wiring**
+**Good: one module folder**
 
 ```text
 checkout/
-  checkout.tsx
-  checkout.screen.tsx
-  checkout.data.ts
-  checkout.list.tsx
-  checkout.summary.tsx
+  checkout.tsx             // namespace, when the module exposes 2+ leaves
+  checkout.screen.tsx      // route-facing UI, a blueprint
+  checkout.data.ts         // module-owned orchestration
+  checkout.list.tsx        // leaf
+  checkout.summary.tsx     // leaf
   checkout.types.ts
-  index.ts
+  index.ts                 // public boundary
 ```
 
-File ownership:
+A module that exposes screens and at most one leaf can skip `checkout.tsx`
+and export from `index.ts` directly.
 
-- `<feature>.tsx` assembles the public namespace when the module exposes a
-compound namespace (2+ leaves, or 1 leaf plus shared state). A module that
-only exposes screens and a single leaf can skip `<feature>.tsx` and export
-directly from `index.ts`.
-- `checkout.screen.tsx` owns the main route-facing UI, kept as a
-declarative blueprint once render states multiply (see
-`architecture-screen-blueprints.md`)
-- `checkout.data.ts` owns module-local orchestration
-- leaf files such as `checkout.list.tsx` and `checkout.summary.tsx` own
-presentational sections
-- `index.ts` owns the public boundary (module root by default; top-level
-screen exports when a module has two or more screens, see
-**Multi-screen modules**)
-
-**Bad: route file owns domain orchestration**
+**Bad: the route file owns domain orchestration**
 
 ```tsx
 export default function CheckoutRoute() {
@@ -79,52 +67,35 @@ export default function CheckoutRoute() {
   return (
     <CheckoutLayout>
       <CheckoutList cart={cart} />
-      <CheckoutSubmitButton
-        loading={isSubmitting}
-        onPress={submitOrder}
-      />
+      <CheckoutSubmitButton loading={isSubmitting} onPress={submitOrder} />
     </CheckoutLayout>
   )
 }
 ```
 
-**Good: the route file is a one-line re-export**
+**Good: the route file is a thin entry**
 
-```tsx
-export { CheckoutScreen as default } from "@/screens/checkout"
-```
-
-In a file-based router (Expo Router, Next.js), the route file is a manifest
-entry: a pointer into the module, not a home for code. The screen stays in
-the module so the module stays movable, and so several route files can name
-the same screen (a catch-all plus its bare segment, a modal and a push
-presentation). A registration-based router (React Navigation stacks) makes
-the same shape a one-line screen registration in a navigator.
+The route file points at the module. Its body holds route-only concerns:
+options the router reads from that file, route-group chrome, a platform
+quirk. Knowledge about the URL itself goes in a doc comment in the route
+file, for example why a catch-all segment exists. The placement rule for the
+router says what else the route file may hold.
 
 **Params belong to the module**
 
-The module reads and parses its own route params inside its context or data
-file; that is what keeps the route file at one line. When parsing is
-nontrivial (amounts, composite ids), colocate the parse helpers in a
-`*.params.ts`.
-
-A route file earns a body only for route-only concerns: static options the
-router reads at build time, route-group chrome, a platform quirk. Route-only
-knowledge (why this URL exists at all, such as a catch-all segment that
-cannot match the bare path) lives as a doc comment in the route file. It is
-routing knowledge, not screen knowledge, and it has nowhere else to go.
+The module parses its own route params in its context or data file. When
+parsing is more than a cast (amounts, composite ids), put the helpers in
+`<stem>.params.ts`. A router that hands params to the route file passes them
+to the module unparsed.
 
 **Multi-screen modules**
 
-When a domain module has two or more screens, export each screen as a
-top-level symbol from `index.ts` instead of namespacing them under the module
-root. Keep the module namespace reserved for shared compound leaves such as
-`Faculty.Avatar`. A module with exactly one screen may still use
-`Feature.Screen` for symmetry.
+When a module has two or more screens, export each screen as a top-level
+symbol. The namespace holds shared leaves only, such as `Faculty.Avatar`.
 
 ```text
 faculty/
-  faculty.tsx                // Faculty = { Avatar }
+  faculty.tsx                  // Faculty = { Avatar }
   faculty.directory.screen.tsx
   faculty.detail.screen.tsx
   faculty.avatar.tsx
@@ -138,28 +109,18 @@ export { FacultyDirectoryScreen } from "./faculty.directory.screen"
 export { FacultyDetailScreen } from "./faculty.detail.screen"
 ```
 
-The set of exports should map to the set of intentional public entry points.
-One root is the default, not a hard cap.
-
-**What belongs in `*.data.ts`**
-
-Put module-owned orchestration there:
+**What belongs in `<stem>.data.ts`**
 
 - grouped view models
-- screen-local queries and mutations
-- filtering and search state
+- queries and mutations only this module runs
+- filter and search state
 - adapters only this module uses
 
-Do not put generic API clients or widely shared hooks there.
-
-When a subflow nests (see `organization-nest-when-prefix-repeats.md`),
-subflow-only data moves into the subflow's `*.data.ts`; see
-`organization-colocate-internals.md`.
+Generic API clients and hooks with several consumers live elsewhere. When a
+subflow nests, data that only the subflow reads moves into the subflow's own
+data file (see `organization-colocate-internals.md`).
 
 **Nested subflows**
-
-When one domain module contains distinct subflows, use nested folders only if
-they represent real ownership.
 
 ```text
 profile/
@@ -167,25 +128,20 @@ profile/
   profile.screen.tsx
   profile.data.ts
   security/
-    profile-security.tsx
-    profile-security.screen.tsx
-    profile-security.data.ts
-    index.ts
-  preferences/
-    profile-preferences.tsx
-    profile-preferences.form.tsx
+    security.tsx
+    security.screen.tsx
+    security.data.ts
     index.ts
   index.ts
 ```
 
-Create nested folders for real subflows, not symmetry.
+Nest a folder when it owns a flow. Do not nest for symmetry.
 
 **Checklist**
 
 - Is a flat route file still enough?
-- Does the module have one obvious home?
-- Is the route file a one-line re-export, or does its body own a route-only
-concern?
-- Does the module read and parse its own params?
-- Is module-owned orchestration colocated in `*.data.ts`?
-- Do nested folders represent real subflows?
+- Did `placement-detect-router.md` decide where the module sits?
+- Does the route file hold only route concerns?
+- Does the module parse its own params?
+- Does module-owned orchestration live in `<stem>.data.ts`?
+- Does each nested folder own a flow?

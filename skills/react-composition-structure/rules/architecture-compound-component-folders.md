@@ -12,128 +12,83 @@ tags: file-organization, compound-components, state-sharing
 
 Use a compound component folder when a shared component has:
 
-- multiple named subparts consumers compose directly
-- shared state needed by several sibling leaves
-- variants that would otherwise turn into boolean props
+- several named parts that consumers compose directly
+- state that several sibling leaves read
+- variants that would otherwise become boolean props
 
-Keep leaf components flat when they are small and presentational. Foldering is a
-response to real complexity, not a default ceremony.
+A small presentational component stays one flat file. Add the folder when the
+component grows one of the traits above, not before.
 
-**Bad: one monolithic component plus sibling exports**
+**Bad: one large component plus sibling exports**
 
 ```text
-components/
-  Composer.tsx
-  ComposerHeader.tsx
-  ComposerFooter.tsx
-  ComposerInput.tsx
-  ComposerActions.tsx
-  useComposerState.ts
+Composer.tsx
+ComposerHeader.tsx
+ComposerFooter.tsx
+ComposerInput.tsx
+ComposerActions.tsx
+useComposerState.ts
 ```
 
 Problems:
 
-- the public API is a bag of related files
-- shared state tends to leak through props or ad hoc hooks
-- consumers must know too many implementation names
+- the public API is six unrelated file names
+- shared state leaks through props or one-off hooks
+- consumers must learn every implementation name
 
 **Good: one folder with one public namespace**
 
 ```text
 composer/
-  composer.tsx
-  composer.context.tsx
-  composer.display.tsx
-  composer.actions.tsx
-  composer.types.ts
-  index.ts
+  composer.tsx             // assembles the namespace
+  composer.context.tsx     // provider wiring
+  composer.display.tsx     // read-oriented leaves
+  composer.actions.tsx     // interactive leaves
+  composer.types.ts        // the context contract
+  index.ts                 // the public boundary
 ```
 
-The folder mirrors the composition model:
-
-- `composer.tsx` assembles the namespace
-- `composer.context.tsx` owns state-sharing boundaries
-- `composer.display.tsx` owns read-oriented leaves
-- `composer.actions.tsx` owns interactive leaves
-- `composer.types.ts` owns the context contract
-- `index.ts` owns the public boundary
-
-**Bad: UI coupled to one specific state hook**
+**Bad: a leaf coupled to one state hook**
 
 ```tsx
 function ComposerInput() {
   const { input, setInput } = useChannelComposerState()
-  return <TextInput value={input} onChangeText={setInput} />
+  return <Input value={input} onChange={setInput} />
 }
 ```
 
-This traps the UI inside one implementation.
+The leaf now works with one state implementation only.
 
-**Good: provider-led state sharing through a stable contract**
+**Good: leaves read a stable context contract**
+
+Use the `state`, `actions`, `meta` contract from Vercel's composition patterns
+guide (https://github.com/vercel-labs/agent-skills, rule 2.2). Any provider
+can implement it, so the same leaves work over local state, a store, or a
+server-synced session.
 
 ```tsx
-type ComposerState = {
-  input: string
-  attachments: Attachment[]
-}
-
-type ComposerActions = {
-  updateInput: (value: string) => void
-  submit: () => void
-}
-
-type ComposerMeta = {
-  inputRef: React.RefObject<TextInput>
-}
-
 type ComposerContextValue = {
-  state: ComposerState
-  actions: ComposerActions
-  meta: ComposerMeta
+  state: { input: string; attachments: Attachment[] }
+  actions: { updateInput: (value: string) => void; submit: () => void }
+  meta: { inputRef: React.RefObject<HTMLInputElement | null> }
 }
-```
 
-```tsx
 const ComposerContext = createContext<ComposerContextValue | null>(null)
 
-function ComposerProvider({
-  children,
-  value,
-}: {
-  children: React.ReactNode
-  value: ComposerContextValue
-}) {
-  return <ComposerContext value={value}>{children}</ComposerContext>
-}
-
 function ComposerInput() {
-  const {
-    state,
-    actions: { updateInput },
-    meta: { inputRef },
-  } = use(ComposerContext)
+  const { state, actions, meta } = use(ComposerContext)!
 
-  return (
-    <TextInput
-      ref={inputRef}
-      value={state.input}
-      onChangeText={updateInput}
-    />
-  )
+  return <Input ref={meta.inputRef} value={state.input} onChange={actions.updateInput} />
 }
 ```
 
-This is the important file-system implication:
+The contract lives in `composer.types.ts` and the provider in
+`composer.context.tsx`. Leaves consume the contract and never own state.
 
-- put the context contract in `composer.types.ts`
-- put provider wiring in `composer.context.tsx`
-- let display and action leaves consume the interface rather than own state
+**State sharing follows the provider, not the layout**
 
-**Sharing state outside the visible frame**
-
-State sharing is a provider concern, not a visual nesting concern.
-Components outside the main frame can still read or mutate state if they live
-inside the provider boundary.
+A component outside the visible frame can read and change the state when it
+sits inside the provider:
 
 ```tsx
 function ForwardMessageDialog() {
@@ -142,34 +97,26 @@ function ForwardMessageDialog() {
       <Dialog>
         <Composer.Frame>
           <Composer.Input />
-          <Composer.Footer>
-            <Composer.Submit />
-          </Composer.Footer>
+          <Composer.Submit />
         </Composer.Frame>
-
         <MessagePreview />
-        <DialogActions>
-          <ForwardButton />
-        </DialogActions>
+        <ForwardButton />
       </Dialog>
     </Composer.Provider>
   )
 }
 ```
 
-This is why context ownership belongs in the component-folder rule: it defines
-how shared UI folders map composition and state sharing into files.
+**A provider owns its orchestration or accepts it, never both**
 
-**Own the orchestration or accept it, never both**
+A provider either starts its own query or session, or it accepts a running
+controller as `value`, as the dialog above does. Accepting one lets a second
+screen render the compound around a session that screen already owns. That
+second screen must never start a duplicate session behind it. Give the
+accepting mode its own named entry point. Do not hide the choice inside
+leaves.
 
-A provider either owns its query/session orchestration or accepts an
-already-running controller as its `value` — the dialog above injects one. The
-injected mode is what lets a second surface render the compound around a
-session it already owns; the embedded presentation must never start a
-duplicate session or query behind it. Keep that entry point intentional and
-named, not a fork hidden inside leaves.
-
-**Bad: a namespace bag that only aliases files**
+**Bad: a namespace that only aliases files**
 
 ```tsx
 export const Requests = {
@@ -178,31 +125,26 @@ export const Requests = {
 }
 ```
 
-If the parts share no state and no consumer composes them together, the
-object is a bag of exports wearing a namespace: callers still learn two
-implementation names, and the bag drags the screen into every import of the
-list. Export each part as a top-level symbol instead (see
-`architecture-route-bound-module-folders.md`) and reserve the namespace for
-parts that actually compose.
+These parts share no state and no consumer composes them together. Callers
+still learn two names, and every import of the list also loads the screen.
+Export each part as a top-level symbol (see
+`architecture-route-bound-module-folders.md`). Keep namespaces for parts that
+compose.
 
 **Gates and nested namespaces**
 
-When several leaves' visibility depends on module state, add a
-`<stem>.states.tsx` of gates: leaves that read the context and return `null`
-unless their state holds. Consumers then compose states declaratively instead
-of branching. When one leaf grows named subparts, assemble a second-level
-namespace (`Composer.Header.Title`) with `Object.assign` in the leaf's own
-file. Both patterns are detailed in `architecture-screen-blueprints.md`.
+When the visibility of several leaves depends on module state, add
+`<stem>.states.tsx` with gates. When one leaf grows named parts, assemble a
+second-level namespace (`Composer.Header.Title`) in that leaf's file.
+`architecture-screen-blueprints.md` covers both.
 
-A module may own both a shared compound namespace and route-bound screens
-when the shared component genuinely belongs to the same domain. Keep the
-compound namespace narrow (leaves only, no screens) and expose screens as
-top-level exports per `architecture-route-bound-module-folders.md`.
+A module may own a shared namespace and route-bound screens when both belong
+to one domain. The namespace holds leaves only. Screens are top-level exports.
 
 **Checklist**
 
-- Is the component truly shared or multi-part?
-- Are several leaves reading the same state?
-- Would booleans or render props otherwise proliferate?
+- Is the component shared or multi-part?
+- Do several leaves read the same state?
 - Does the folder expose one root namespace?
-- Is provider wiring isolated from leaf rendering?
+- Do leaves read the context contract instead of a specific hook?
+- Does provider wiring sit apart from leaf rendering?
