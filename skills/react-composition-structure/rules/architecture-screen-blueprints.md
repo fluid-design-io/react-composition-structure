@@ -10,19 +10,15 @@ tags: screens, state-gates, compound-components, colocated-docs
 
 ## Compose screens as declarative blueprints
 
-When a screen has several render states (loading, offline, error, empty,
-ready), keep the screen file a **blueprint**: a declarative tree of the
-module's compound leaves, with no branching, no data reads, and no layout
-logic. Each state becomes a **gate**, a leaf that reads the module context and
-returns `null` unless its state holds. The parent never decides visibility;
-each subtree decides for itself.
+A blueprint is a screen file that contains one declarative tree of the
+module's leaves. It has no branching, no data reads, and no layout logic. A
+reviewer reads the blueprint to learn what the screen is made of and which
+states it can be in, without opening a leaf.
 
-Gates and blueprints are pure React. Nothing here touches a platform API, so
-the pattern is identical in React DOM and React Native.
-
-The route file above a blueprint stays a one-line re-export. The module, not
-the router tree, is the blueprint's home (see
-`architecture-route-bound-module-folders.md`).
+A screen with one render state is already a blueprint if it follows that
+rule. Gates are the layer you add when a second render state appears. A gate
+is a leaf that reads the module context and returns `null` unless its state
+holds. The parent never decides visibility.
 
 **Bad: the screen owns the branching**
 
@@ -44,15 +40,15 @@ export function ActivityScreen() {
 Problems:
 
 - every new state widens the conditional tree
-- the screen reads data, so nobody can understand it without the hook
-- render states hide inside expressions instead of being enumerable
-- the reasoning behind each state has nowhere to live but commit messages
+- the screen reads data, so a reader needs the hook to understand it
+- the states hide inside expressions, so nobody can list them
+- the reason for each state has no place to live
 
-**Good: the screen is a blueprint of every state**
+**Good: the blueprint lists every state**
 
 ```tsx
 /**
- * The member activity feed. Segments filter on the server: each segment is
+ * The member activity feed. Segments filter on the server. Each segment is
  * its own query, never a client-side filter over a fetched page.
  */
 export function ActivityScreen() {
@@ -68,14 +64,13 @@ export function ActivityScreen() {
 }
 ```
 
-Reading the blueprint enumerates what the screen can be. The gates live in the
-module's `<stem>.states.tsx`:
+The gates live in `<stem>.states.tsx`:
 
 ```tsx
 /** Full-page substitute when nothing is cached and the device is offline. */
 export function ActivityOffline() {
   const { state } = useActivityContext()
-  if (!state.isColdOffline) return null
+  if (state.status !== "offline") return null
 
   return <OfflineState subject="Your activity" />
 }
@@ -83,17 +78,16 @@ export function ActivityOffline() {
 /** Everything the feed shows once the offline page does not own the screen. */
 export function ActivityReady({ children }: PropsWithChildren) {
   const { state } = useActivityContext()
-  if (state.isColdOffline) return null
+  if (state.status === "offline") return null
 
   return <>{children}</>
 }
 ```
 
-A gate owns one visibility rule and states it once. Sibling gates may be
-exclusive (offline vs. ready) or stacked (an error banner above a stale list).
-Either way the blueprint shows the full set without a single conditional.
+A gate owns one visibility rule. Sibling gates may exclude each other
+(offline, ready) or stack (an error banner above a stale list).
 
-**Bad: gates in name, props in practice**
+**Bad: gates that take a props bag**
 
 ```tsx
 export function PayLinkScreen() {
@@ -109,48 +103,38 @@ export function PayLinkScreen() {
 }
 ```
 
-Handing every gate the same state bag keeps the orchestration in the screen
-in disguise: the file still reads data, still knows every gate's inputs, and
-adding a state edits two files. Give the gates a provider and let each read
-the module context; the blueprint goes back to naming states only.
+The screen still reads data and still knows every gate's inputs. Adding a
+state edits two files. Give the gates a provider and let each read context.
 
-**Decide precedence once**
+**Derive precedence once**
 
-With three or more states, do not let each gate re-derive precedence from
-query booleans (`isOffline && !isPending && …` restated per gate). Derive one
-discriminated status in the provider — `'offline' | 'loading' | 'error' |
-'ready'` — and let each gate test it. Precedence then lives in one derivation
-instead of being reconstructed, slightly differently, in every gate.
+With three or more states, derive one discriminated status in the provider,
+such as `"offline" | "loading" | "error" | "ready"`, and let each gate test
+it. Gates that each rebuild precedence from query booleans drift apart.
 
-**Notes attach to the subtree they govern**
+**Notes sit on the subtree they explain**
 
-A blueprint has no logic to read, so the design intent moves into doc
-comments, placed on exactly the subtree they explain. Screen-scope decisions
-(why this screen is not behind a shared guard, when a poll runs) go on the
-screen. A rule that only governs one leaf goes on that leaf:
+A blueprint has no logic, so design intent goes in doc comments. A decision
+about the whole screen goes on the screen. A rule about one leaf goes on that
+leaf:
 
 ```tsx
 /**
- * The address renders plain rather than split into a bright local part and a
- * dim domain: that split is a de-duplication device for lists that repeat one
- * domain down every row, and there is nothing to de-duplicate when one
- * address is stated once.
+ * The address renders plain. Splitting it into a bright local part and a dim
+ * domain helps lists that repeat one domain down every row. One address
+ * stated once has nothing to de-duplicate.
  */
 const ActivityHeaderAddress = () => {
-  const state = useActivity()
-  if (state.status !== 'ready') return null
+  const { state } = useActivityContext()
+  if (state.status !== "ready") return null
 
   return <Chrome.Subtitle>{state.record.address}</Chrome.Subtitle>
 }
 ```
 
-Inspecting any part of the tree brings its rationale with it; the module needs
-no separate design document for decisions a leaf can carry.
+**A leaf with named parts becomes a nested namespace**
 
-**Leaves that grow parts become nested namespaces**
-
-When one leaf develops named subparts, assemble a second-level namespace in
-the leaf's own file. The file count does not change:
+Assemble it in the leaf's own file. The file count does not change.
 
 ```tsx
 // activity.header.tsx
@@ -167,22 +151,15 @@ export const ActivityHeader = Object.assign(ActivityHeaderRoot, {
 </Activity.Header>
 ```
 
-Promote the leaf to its own folder only when the prefix-repeats trigger fires
-(see `organization-nest-when-prefix-repeats.md`).
-
-**When not to blueprint**
-
-A screen with one state and no gates is just a screen. Add
-`<stem>.states.tsx` when the second render state appears, not before.
+Move the leaf into its own folder only when the prefix trigger fires (see
+`organization-nest-when-prefix-repeats.md`).
 
 **Checklist**
 
-- Can every state the screen can be in be read off the blueprint?
+- Can a reader list every state of the screen from the blueprint?
 - Does each gate read context and decide its own visibility?
-- Do gates read module context rather than a props bag the screen assembles?
-- Is state precedence derived once as a discriminated status, not restated
-per gate?
+- Does the provider derive state precedence once?
 - Is the screen file free of data reads, router reads, conditionals, and
 layout logic?
-- Do design notes sit on the exact subtree they govern?
-- Are second-level parts nested namespaces in the leaf's file, not new files?
+- Do design notes sit on the subtree they explain?
+- Are second-level parts nested namespaces in the leaf's file?

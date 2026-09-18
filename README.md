@@ -1,81 +1,131 @@
-# React Composition Structure
+# React composition structure
 
-A structured repository for React and React Native file-system composition
-patterns that scale. These patterns help teams express good component
-architecture in folders, files, naming, and export boundaries instead of
-letting structure drift into monolithic files or bag-of-exports modules.
+Agent skills that say where React files live, how to name them, and how a
+screen file reads. One shared skill covers every React and React Native
+codebase. Three framework skills add the placement rules for Next.js, Expo
+Router, and TanStack Start.
+
+These skills cover how code looks and where it sits. Official framework docs
+and official framework skills own rendering, caching, and data fetching, and
+they win any conflict.
 
 ## Install
 
+Install the shared skill and the skill for your framework:
+
 ```bash
-npx skills add fluid-design-io/react-composition-structure
+npx skills add fluid-design-io/react-composition-structure --skill react-composition-structure react-composition-structure-nextjs
 ```
 
-## Structure
+| Your app | Skills |
+| --- | --- |
+| Next.js App Router | `react-composition-structure` `react-composition-structure-nextjs` |
+| Expo Router | `react-composition-structure` `react-composition-structure-expo` |
+| TanStack Start | `react-composition-structure` `react-composition-structure-tanstack-start` |
+| React Navigation, Next.js Pages Router, React Router, no router | `react-composition-structure` |
+| A monorepo with several of these | the shared skill plus each framework skill |
 
-Shippable skill files live in `skills/react-composition-structure/` so that
-`npx skills add` vendors the whole self-contained folder rather than just the
-single `SKILL.md`:
+A framework skill needs the shared skill. If the shared skill is missing, the
+framework skill tells the agent to stop and print the install command.
 
-- `skills/react-composition-structure/SKILL.md`: trigger metadata, the
-primitives vocabulary, the scaling ladder, and the rule index
-- `skills/react-composition-structure/rules/`: one file per rule
-- `skills/react-composition-structure/AGENTS.md`: full compiled guide for
-agents (generated; do not edit by hand)
+### Upgrading from 1.x
 
-The rule index lives in `SKILL.md` and nowhere else, so this README cannot
-drift out of date with it.
+`npx skills update` brings the shared skill to 2.0.0. Then add your framework
+skill with the command above. Version 1.x told every router to re-export
+screens from a separate `screens/` tree. Version 2.0.0 keeps that as the
+default and gives Next.js and TanStack Start their own placements.
 
-Build tooling stays at the repo root and is not vendored:
+## How an agent uses them
 
-- `templates/agents.head.md`: static intro (Note + Abstract) for the compiled
-guide
-- `metadata.json`: organization/date/abstract consumed by the generator
-- `scripts/build-agents.mjs`: generates the skill's `AGENTS.md` from the
-sources above
+The shared `SKILL.md` opens with a router table. The agent finds the nearest
+`package.json`, matches a dependency and a file, and reads the framework skill
+the table names. Each framework `SKILL.md` checks the same evidence before it
+applies. A monorepo with a mobile app and a web app gets a separate answer
+for each package.
 
-## Core principles
+## Repository layout
 
-1. **Structure should reflect composition.** If the UI is compound, the folder
-  should make that obvious
-2. **One module, one public root.** Export the namespace, not every internal
-  leaf
-3. **Colocate module-owned orchestration.** Keep screen and page-specific
-  `*.data.ts` close to the module they serve
-4. **Name by ownership and responsibility.** Reuse one stem and make file jobs
-  obvious from their suffixes
-5. **Structure is a response to growth.** Nest, group, and lift when a trigger
-  fires, not for symmetry
-6. **Preserve coherent repo conventions.** Adapt the structure to the codebase
-  instead of forcing a second naming system
+```text
+skills/
+  react-composition-structure/                  shared rules, router table
+  react-composition-structure-nextjs/           5 rules
+  react-composition-structure-expo/             1 rule
+  react-composition-structure-tanstack-start/   1 rule
+templates/<skill>.head.md    intro for each generated AGENTS.md
+metadata.json                version, date, skill titles
+scripts/build-agents.mjs     generates AGENTS.md and lints the skills
+scripts/verify-fixtures.mjs  builds the fixtures and checks the rules' claims
+fixtures/next/               a Next.js app that uses every Next.js rule
+fixtures/tanstack/           a TanStack Start app that uses the TanStack rule
+```
 
-## Creating a new rule
+Each skill folder holds `SKILL.md`, `rules/`, and a generated `AGENTS.md`.
+`npx skills add` installs the whole folder. Templates, scripts, and fixtures
+stay in this repo.
 
-1. Create a new file in `skills/react-composition-structure/rules/` using the
-  appropriate prefix
-2. Add frontmatter (`title`, `slug`, `group`, `groupNumber`, `section`,
-  `impact`, optional `groupIntro`) so the generator can place and order it
-3. Use one main concern per rule file
-4. Include:
-  - a short explanation of why the rule matters
-  - bad and good examples
-  - file trees or code snippets when helpful
-  - practical exceptions or a checklist if the rule needs guardrails
-5. Add the rule to `skills/react-composition-structure/SKILL.md` so the quick
-  reference stays current
-6. Run `npm run build` to regenerate
-  `skills/react-composition-structure/AGENTS.md` from `rules/`
+## Commands
 
-## Prefix guide
+```bash
+npm run build
+```
+
+Generates each skill's `AGENTS.md` from its `rules/`. The build fails when a
+skill contains a term that belongs to another framework, such as
+`createFileRoute` in the Next.js skill. It also fails on an em dash, an en
+dash, or an arrow character.
+
+```bash
+npm run verify
+```
+
+Installs and builds both fixtures, then checks 17 claims. Examples are that
+colocated files add no Next.js routes, that a re-exported `generateMetadata`
+sets the title, and that the TanStack generator turns an empty stem-dotted
+file into a live route. Run it when a framework ships a major version.
+
+## Principles
+
+1. Folders show the composition. A compound component gets one folder and one
+  namespace.
+2. A module exports one root. A consumer proves every other export.
+3. Orchestration lives with its module, in `<stem>.data.ts`.
+4. A file name states the owner and the job.
+5. Structure follows a trigger. Nest, group, and lift when the trigger fires.
+6. Shape is the same under every router. Workspace evidence decides
+  placement, one package at a time.
+7. A coherent existing convention stays.
+
+## Adding a rule
+
+1. Create `skills/<skill>/rules/<prefix>-<name>.md` with the frontmatter the
+  other rules use (`title`, `slug`, `group`, `groupNumber`, `section`,
+  `impact`, `tags`).
+2. Write the rule, short Bad and Good examples in an abstract domain, and a
+  checklist. Framework rules end with **Official docs**.
+3. Add the rule to that skill's `SKILL.md` table.
+4. Run `npm run build`. If the rule makes a claim about framework behavior,
+  add it to a fixture and to `scripts/verify-fixtures.mjs`.
+
+Rule file prefixes:
 
 - `architecture-` for folder shape and module organization
-- `boundaries-` for public API and export rules
-- `naming-` for file stems, suffixes, and naming consistency
-- `organization-` for when-to-nest, when-to-group, and when-to-lift triggers
+- `boundaries-` for exports
+- `naming-` for stems and suffixes
+- `organization-` for the nest, group, and lift triggers
+- `placement-` for where a module sits, in the shared skill
+- `nextjs-`, `expo-`, `tanstack-` for framework rules
+
+Shared rules never name a framework. Example trees in shared rules have no
+parent directory. `placement-detect-router.md` is the one exception, and its
+frontmatter says so with `lint: framework-names-allowed`.
 
 ## Impact levels
 
-- `HIGH`: foundational structure patterns that prevent churn and unclear
-ownership
-- `MEDIUM`: patterns that improve maintainability, discoverability, and
-consistency
+- `HIGH`: structure that prevents churn and unclear ownership
+- `MEDIUM`: structure that improves maintainability and consistency
+
+## Prose style
+
+Every file follows the `unslop` rules: no em dashes, no colon used as a
+connector, sentence-case headings, active voice, whole sentences, and plain
+words.

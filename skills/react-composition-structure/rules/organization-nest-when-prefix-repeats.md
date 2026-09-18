@@ -5,115 +5,84 @@ group: Organization heuristics
 groupNumber: 5
 section: "5.1"
 impact: MEDIUM
-groupIntro: "These rules describe *when* to move between layouts the earlier sections define. They are triggers, not new structures: apply them to decide when a flat layout should nest, when peers should group, and when colocated code should be lifted."
-tags: file-organization, structure, refactoring
+groupIntro: "These rules add no new structures. Each one names a trigger that tells you when to nest a flat folder, when to group peers, and when to lift colocated code."
+tags: file-organization, nesting, colocation, heuristics
 ---
 
 ## Nest folders when filename prefixes repeat
 
-A flat module that started with two or three files eventually grows into a
-dozen. Once multiple files share the same prefix, the prefix is no longer
-distinguishing information. It is noise.
+**Trigger:** three or more sibling files share a leading stem, such as
+`calendar.detail.*`. Move them into a folder named for that stem.
 
-**Trigger:** three or more sibling files share the same leading stem (e.g.
-`calendar.detail.*`). Promote the shared prefix to a folder and give the folder
-its own `index.ts`.
+Files inside the new folder keep a short stem (`detail/detail.header.tsx`,
+not `detail/header.tsx`), so a search for `detail.header` still finds the
+file.
 
-Keep a short sub-stem on files inside the new folder
-(`detail/detail.header.tsx`, not `detail/header.tsx`). This preserves the one-
-stem-per-module rule from `naming-stems-and-suffixes.md` and keeps search terms
-like `detail.header` resolvable across the repo.
-
-**Bad: flat layout with repeated prefixes**
+**Bad: a flat folder with a repeated prefix**
 
 ```text
-screens/
-  calendar.detail.header.tsx
-  calendar.detail.list.tsx
-  calendar.detail.footer.tsx
-  calendar.detail.utils.ts
-  calendar.detail.data.ts
-  calendar.detail.types.ts
-  calendar.detail.index.ts
-  calendar.list.tsx
-  calendar.data.ts
-  calendar.types.ts
+calendar.detail.header.tsx
+calendar.detail.list.tsx
+calendar.detail.footer.tsx
+calendar.detail.utils.ts
+calendar.detail.data.ts
+calendar.detail.types.ts
+calendar.list.tsx
+calendar.data.ts
+calendar.types.ts
 ```
 
 Problems:
 
-- the `detail` prefix is repeated in every filename with no structural payoff
-- `calendar.detail.*` and `calendar.*` interleave when sorted, hiding ownership
-- there is no public boundary: every file looks equally importable
-- the `detail` subtree cannot be moved or deleted as a unit
+- `detail` repeats in six names and separates nothing
+- `calendar.detail.*` and `calendar.*` interleave when sorted
+- every file looks importable, because no file marks a boundary
+- nobody can move or delete the detail flow as a unit
 
-**Good: nest once the prefix repeats**
+**Good: the folder carries the prefix**
 
 ```text
-screens/
-  calendar/
-    detail/
-      detail.header.tsx
-      detail.list.tsx
-      detail.footer.tsx
-      detail.utils.ts
-      detail.data.ts
-      detail.types.ts
-      index.ts
-    calendar.list.tsx
-    calendar.data.ts
-    calendar.types.ts
+calendar/
+  detail/
+    detail.header.tsx
+    detail.list.tsx
+    detail.footer.tsx
+    detail.utils.ts
+    detail.data.ts
+    detail.types.ts
     index.ts
+  calendar.list.tsx
+  calendar.data.ts
+  calendar.types.ts
+  index.ts
 ```
 
-The folder now carries the prefix. The files keep the sub-stem so intent stays
-legible both inside and outside the folder. `index.ts` becomes the public
-boundary (see `boundaries-public-api.md`); internal leaves stay internal
-unless intentionally exposed.
+**When the subfolder gets an `index.ts`**
 
-**Naming stays mechanical**
-
-
-| File                           | Exports                |
-| ------------------------------ | ---------------------- |
-| `composer/composer.input.tsx`  | `ComposerInput`        |
-| `composer/composer.footer.tsx` | `ComposerFooter`       |
-| `composer/index.ts`            | `Composer` (namespace) |
-
-
-The path maps 1:1 to the component name so agents and humans never have to
-guess where `Composer.Input` lives.
+A subfolder gets its own `index.ts` only when it is a subflow that its parent
+consumes as a unit, as `detail/` is here. Otherwise files import each other
+directly (`./detail.header`) and the module's root `index.ts` stays the only
+public boundary (see `boundaries-public-api.md`).
 
 **When not to nest**
 
-- the folder would contain only one or two files
-- the shared prefix appears only twice and has no signs of growing
-- nesting would be purely aesthetic (keep symmetry for symmetry's sake out)
+- the folder would hold one or two files
+- the prefix appears twice and shows no sign of growing
+- the only gain is symmetry
 
-Count the folder the refactor produces, not the folder you start with: a
-two-file cluster that the same plan grows into a compound (provider, gates,
-screen) already meets the trigger. Tests move with their cluster into its
-`__test__/` but do not count toward the trigger. Inside a module already past
-the role-folder length trigger, a two-file cluster that is a real owned seam
-may still nest — name that reason in the plan or commit so the below-trigger
-fold reads as a decision, not drift.
+Count the folder your change produces, not the folder you start with. Two
+files that the same change grows into a provider, gates, and a screen already
+meet the trigger. Tests move with their files into the folder's `__test__/`
+and do not count. Inside a module that is already past the role-folder
+trigger, two files that own a distinct flow may still nest. Write that reason
+in the commit.
 
-When no prefix repeats but the flat listing has grown long anyway, that is
-the sibling trigger: group by role instead (see
-`organization-group-by-role.md`).
-
-**Barrel caveat**
-
-Subfolders may have a local `index.ts` only when they represent a real subflow
-with its own public API consumed by parent siblings (the nested `detail/`
-example above is such a case). Otherwise, imports inside the subfolder should
-reference files directly (`./detail.header`), and the module's root
-`index.ts` remains the sole public boundary.
+When no prefix repeats but the flat listing is long, group by role instead
+(see `organization-group-by-role.md`).
 
 **Checklist**
 
-- Do three or more sibling files share the same leading stem?
-- Would promoting the stem to a folder collapse repetition without inventing
-new names?
-- Does the new folder expose only an intentional public API via `index.ts`?
-- Is the sub-stem preserved on files inside the folder?
+- Do three or more sibling files share a leading stem?
+- Does the new folder keep the short stem on its files?
+- Does the folder have an `index.ts` only if its parent consumes it as a
+unit?

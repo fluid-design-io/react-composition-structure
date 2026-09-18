@@ -5,25 +5,21 @@ group: Organization heuristics
 groupNumber: 5
 section: "5.2"
 impact: MEDIUM
-tags: file-organization, structure, refactoring
+tags: file-organization, role-folders, heuristics
 ---
 
 ## Group peer leaves into role folders when a flat module grows long
 
-The prefix-repeats trigger (`organization-nest-when-prefix-repeats.md`) never
-fires on a module whose files all share one stem with unique suffixes. Such a
-module can still grow past the point where a flat listing communicates
-anything: twenty siblings sort into one alphabetical soup where wiring,
-chrome, and domain sections interleave.
+The prefix trigger (`organization-nest-when-prefix-repeats.md`) never fires
+on a module whose files all share one stem with unique suffixes. That module
+can still grow until the flat listing tells a reader nothing.
 
-**Trigger:** the flat listing exceeds roughly a dozen files, no sub-prefix
-repeats, and the files cluster by role. Move each cluster into a **role
-folder** named for what its files *are* (`layout/` for first-party chrome,
-`widgets/` for composable sections), not for a flow they own. The stem resets
-to the folder name (`layout/layout.close-button.tsx`), per
-`naming-stems-and-suffixes.md`.
+**Trigger:** the flat listing passes about a dozen files, no prefix repeats,
+and the files cluster by role. Move each cluster into a role folder named for
+what its files are (`layout/` for chrome, `widgets/` for composable
+sections). The stem resets to the folder name.
 
-**Bad: one stem, twenty siblings, no visible roles**
+**Bad: one stem, twenty siblings**
 
 ```text
 composer/
@@ -36,7 +32,6 @@ composer/
   composer.currency-select.tsx
   composer.footer.tsx
   composer.funding-widget.tsx
-  composer.hero-caption.tsx
   composer.method-widget.tsx
   composer.note-widget.tsx
   composer.offline-banner.tsx
@@ -49,15 +44,11 @@ composer/
   index.ts
 ```
 
-Problems:
+Wiring, chrome, and domain sections interleave. The file name is the only
+place a role can live, so names grow qualifier chains (`amount-hero`,
+`counterparty-widget`).
 
-- role is invisible in the listing: wiring (`context`, `types`, `theme`),
-chrome (`close-button`, `title`, `sheet`) and domain sections interleave
-- the filename is the only place role can live, so names grow qualifier
-chains (`hero`, `hero-caption`, `amount-hero`)
-- scanning for "the file that draws X" means reading every name
-
-**Good: root keeps the wiring; roles get folders**
+**Good: the root keeps the wiring and roles get folders**
 
 ```text
 composer/
@@ -85,41 +76,34 @@ composer/
   index.ts
 ```
 
-The assembly and state wiring stay at the root, so the namespace file is still
-the first thing the listing shows. (`amount/` is the sibling trigger at work:
-`composer.amount-*` repeated, so the prefix rule promoted it. Both triggers
-routinely fire in the same module.)
+The namespace file is still the first thing in the listing. `amount/` came
+from the prefix trigger, because `composer.amount-*` repeated. Both triggers
+often fire in one module.
 
 **A role folder is not a subflow folder**
 
-A subflow folder owns a flow: its own screens, data, and public API, and may
-earn a local `index.ts` when parents consume it as a unit. A role folder just
-shelves peers of the same kind:
+A subflow folder owns a flow, with its own screens, data, and public API. A
+role folder holds peers of one kind:
 
-- no local barrel; parents import leaves directly
+- it has no `index.ts`, and parents import its leaves directly
 (`./layout/layout.close-button`)
 - the module root `index.ts` stays the only public boundary
 - moving a file between role folders is a rename, not an API change
 
-The no-barrel rule is not stylistic. A barrel couples every leaf into one
-import graph, so importing one logic-only file drags every UI leaf and its
-platform runtime along with it, which breaks lightweight test runners and
-chunking. Both kinds of folder coexist in one module: a host module can hold
-`pay/` and `guest/` as subflows beside `layout/` as a role folder.
+A barrel in a role folder joins every leaf into one import graph. Importing
+one logic-only file then loads every UI leaf and its platform runtime, which
+breaks lightweight test runners and code splitting.
 
 **When not to group**
 
-- a proposed folder would hold fewer than three files
-- the role name says nothing (`misc/`, `components/`, `shared/` inside a
-module); if no honest name exists, the cluster is not a role
-- the flat listing still reads at a glance; length is the trigger, not
-symmetry
+- a folder would hold fewer than three files
+- the only available name says nothing, such as `misc/`, `components/`, or
+`shared/` inside a module
+- the flat listing still reads at a glance
 
 **Checklist**
 
-- Does the flat listing still read at a glance, or has it passed about a
-dozen files with no repeating prefix?
-- Does each folder name a real role with three or more members?
+- Has the flat listing passed about a dozen files with no repeating prefix?
+- Does each folder name a role with three or more members?
 - Did the stem reset to the folder name?
-- Do parents import role-folder leaves directly, with the module root
-`index.ts` as the only public boundary?
+- Do parents import role-folder leaves directly?

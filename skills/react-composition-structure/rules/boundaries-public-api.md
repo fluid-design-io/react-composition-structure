@@ -10,11 +10,11 @@ tags: public-api, exports, boundaries
 
 ## Export one module root by default
 
-For both shared components and route-bound module folders, export one module
-root by default. This keeps internal structure free to change without churn for
-callers.
+A module folder exports its root namespace and nothing else, unless another
+export is a deliberate entry point. Callers then import one name, and the
+files inside the folder can change without breaking them.
 
-**Bad: export the entire inside of the folder**
+**Bad: export everything inside the folder**
 
 ```ts
 export { CheckoutScreen } from "./checkout.screen"
@@ -23,17 +23,17 @@ export { useCheckoutData } from "./checkout.data"
 export { CheckoutSummary } from "./checkout.summary"
 ```
 
-Problems:
+Callers now depend on the folder's layout, and every internal rename breaks
+an import.
 
-- callers couple to internal layout
-- every refactor becomes a breaking import change
-- public API expands faster than the actual design intent
-
-**Good: export only intentional public entry points**
+**Good: export the entry points**
 
 ```ts
 export { Checkout } from "./checkout"
 ```
+
+A module with two or more screens exports each screen beside the root (see
+`architecture-route-bound-module-folders.md`):
 
 ```ts
 export { Faculty } from "./faculty"
@@ -41,44 +41,25 @@ export { FacultyDirectoryScreen } from "./faculty.directory.screen"
 export { FacultyDetailScreen } from "./faculty.detail.screen"
 ```
 
-The same rule applies to compound components:
+**A consumer proves each export**
 
-```ts
-export { Composer } from "./composer"
-```
+When you restructure an existing barrel, search for each exported symbol
+outside the module. Delete the exports nobody imports. Do not carry them into
+the new `index.ts`.
 
-The rule is not "always exactly one export". It is "exports match intentional
-public entry points". One root is the default; screens become top-level
-exports when a module has two or more screens (see
-`architecture-route-bound-module-folders.md`).
+**Exceptions**
 
-Keep internal leaves internal unless they are intentionally designed as public
-entrypoints.
+Export another symbol only when it is part of the contract:
 
-**Exports are proven by consumers**
+- a documented type for external consumers
+- a route helper that code outside the module calls
+- a test utility in a separate testing entry point
 
-Every export is a claim that a consumer exists. When restructuring an
-existing barrel, audit the claim: search for each symbol outside the module.
-An export nobody imports is not public API — delete it during the refactor
-rather than carrying it into the new boundary. Barrels accumulate dead
-exports because exporting once felt harmless; the restructure is the moment
-that debt gets paid, not preserved.
-
-**Reasonable exceptions**
-
-Export additional symbols only when they are truly part of the public contract:
-
-- a documented type meant for external consumers
-- a route helper explicitly reused outside the module
-- a test utility in a clearly separate testing boundary
-
-If an exception exists, document it rather than letting the barrel grow
-implicitly.
+Write the reason next to the export.
 
 **Checklist**
 
-- Does `index.ts` export only intentional public entry points (root by default,
-plus top-level screens when a module has two or more screens)?
-- Are callers importing the namespace instead of internal leaves?
-- Has every export kept through a refactor been proven by a consumer search?
-- Are exceptions intentional and documented?
+- Does `index.ts` export only entry points?
+- Do callers import the namespace and not internal leaves?
+- Did a consumer search prove every export you kept?
+- Does each exception have a written reason?
