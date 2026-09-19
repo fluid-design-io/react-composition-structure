@@ -1,8 +1,6 @@
-import { Suspense } from "react"
-import { BenefitsHero } from "./benefits.hero"
-import { BenefitsPricing } from "./benefits.pricing"
-import { BenefitsPrice } from "./benefits.price"
-import { BenefitsRewards } from "./benefits.rewards"
+import { BenefitsHero } from "./sections/benefits.hero"
+import { BenefitsPricing } from "./sections/benefits.pricing"
+import { BenefitsRewards } from "./sections/benefits.rewards"
 
 export { metadata } from "./benefits.metadata"
 
@@ -11,11 +9,7 @@ export default function BenefitsPage() {
     <main>
       <BenefitsHero />
       <BenefitsRewards />
-      <BenefitsPricing>
-        <Suspense fallback={<BenefitsPrice.Skeleton />}>
-          <BenefitsPrice />
-        </Suspense>
-      </BenefitsPricing>
+      <BenefitsPricing />
     </main>
   )
 }

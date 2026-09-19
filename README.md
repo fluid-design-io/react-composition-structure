@@ -48,7 +48,7 @@ for each package.
 ```text
 skills/
   react-composition-structure/                  shared rules, router table
-  react-composition-structure-nextjs/           5 rules
+  react-composition-structure-nextjs/           7 rules
   react-composition-structure-expo/             1 rule
   react-composition-structure-tanstack-start/   1 rule
 templates/<skill>.head.md    intro for each generated AGENTS.md

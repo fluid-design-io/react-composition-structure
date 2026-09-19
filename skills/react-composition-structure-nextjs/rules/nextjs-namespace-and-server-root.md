@@ -123,6 +123,41 @@ The page shows where the route streams. The root shows what the route is
 made of. Add a provider when the first piece of client state appears, not
 before.
 
+**A small component splits into `<stem>.tsx` and `<stem>.client.tsx`**
+
+A component with no provider often needs one interactive part, such as a
+menu that reads server data and opens on a tap. The server half keeps the
+plain name, because it is the file consumers import. The interactive half
+is `<stem>.client.tsx` and starts with `"use client"`:
+
+```text
+nav-mobile.tsx           // async, reads data, renders <NavMobileClient>
+nav-mobile.client.tsx    // "use client", state and handlers
+```
+
+The server half passes plain data as props and server-rendered parts as
+`children`. Only the server half imports the client half. A stem gets one
+`.client.tsx`. When a second client file appears, the component has grown
+into a module, and its client files take the role suffixes (`.context.tsx`,
+`.display.tsx`, `.actions.tsx`).
+
+Do not mark ordinary Server Components with `.server.tsx`. A file with no
+directive already renders on the server unless a client file imports it, so
+the suffix would end up on every file. Use `.server.tsx` for one case. Two
+components share a name and an API, one for each side, such as a
+`SignedIn` that awaits the session and a `SignedIn` that reads a hook:
+
+```text
+auth-state.server.tsx    // import "server-only", async
+auth-state.client.tsx    // "use client"
+```
+
+The suffix and the first line always agree. `.client.tsx` starts with
+`"use client"`, and `.server.ts` or `.server.tsx` starts with
+`import "server-only"`, so importing the wrong twin fails the build and does
+not fail in the browser. The folder's `index.ts` exports one twin at most,
+and the doc comment on each names the other.
+
 **Server-only code lives in `<stem>.server.ts`**
 
 The file starts with `import "server-only"`. It holds the module's data
@@ -145,6 +180,8 @@ word cost every reader a second look.
 - Does the client provider create `actions`?
 - Is each Server Component leaf under a provider large and static?
 - Does a route with no client state skip the provider?
+- Does every `.client.tsx` start with `"use client"`, and every `.server.*`
+file with `import "server-only"`?
 
 **Official docs:** `server-and-client-components` (Passing data from Server
 to Client Components, Interleaving Server and Client Components, Context
