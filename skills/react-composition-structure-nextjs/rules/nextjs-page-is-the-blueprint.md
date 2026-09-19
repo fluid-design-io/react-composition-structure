@@ -35,6 +35,13 @@ export default function OrdersPage({ params }: PageProps<"/orders/[id]">) {
 }
 ```
 
+**The page component is named `<Stem>Page`**
+
+`orders/[id]/page.tsx` exports `OrdersPage`. A page copied from another
+route keeps the old name until someone reads a stack trace, so rename it
+when you touch the file. The root element is the `<main>` landmark (see
+`nextjs-sections-folder.md`).
+
 **The page component is sync**
 
 The page never awaits. It passes `params` and `searchParams` down as the
@@ -66,9 +73,14 @@ exports gets no metadata file. An empty file tells the reader nothing. Segment c
 **A static page is a list of sections**
 
 A page with no request data needs no provider and no `<Suspense>`. Its
-blueprint is a list of server components:
+blueprint is a list of server components. They live in `sections/`, and the
+page holds no wrapper markup around them (see `nextjs-sections-folder.md`):
 
 ```tsx
+import { BenefitsHero } from "./sections/benefits.hero"
+import { BenefitsRewards } from "./sections/benefits.rewards"
+import { BenefitsSecurity } from "./sections/benefits.security"
+
 export { generateMetadata } from "./benefits.metadata"
 
 export default function BenefitsPage() {
@@ -106,7 +118,9 @@ export { LandingScreen as default } from "@/components/marketing"
 - Did every access check stay where it was, with the user told about it?
 - Do routing exports live in `<stem>.metadata.ts`, with no empty metadata
 file?
-- Does the file have zero conditionals and zero data reads?
+- Does the file have zero conditionals, zero data reads, and no
+commented-out JSX?
+- Is the component named `<Stem>Page`, with `<main>` as its root?
 
 **Official docs:** `page` (params, searchParams), `generate-metadata`,
 `migrating-to-cache-components`, `use-cache`, `data-security`,

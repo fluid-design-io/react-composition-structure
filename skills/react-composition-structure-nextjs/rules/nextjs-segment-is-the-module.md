@@ -36,6 +36,9 @@ its files are, such as `rows/`, or keep the files flat. Folders inside a
 segment take no underscore prefix. Images, fonts, stylesheets, and metadata
 image files stay in the segment under their own names.
 
+A page that is a list of sections keeps them in `sections/`, and those
+files keep the route stem (see `nextjs-sections-folder.md`).
+
 **Choosing the stem**
 
 The stem is the name of the nearest static segment. Three cases need more:

@@ -26,6 +26,7 @@ skills own rendering, caching, and prefetching, and they win any conflict.
   - 1.4 [Assemble the namespace on the server and seed a client provider](#14-assemble-the-namespace-on-the-server-and-seed-a-client-provider)
   - 1.5 [Use gates for client state and variants for server state](#15-use-gates-for-client-state-and-variants-for-server-state)
   - 1.6 [layout.tsx is a blueprint of chrome](#16-layouttsx-is-a-blueprint-of-chrome)
+  - 1.7 [A page lists sections from sections/](#17-a-page-lists-sections-from-sections)
 
 ## 1. Next.js App Router
 
@@ -56,6 +57,9 @@ produce `components/components.benefit-row.tsx`. Name the folder for what
 its files are, such as `rows/`, or keep the files flat. Folders inside a
 segment take no underscore prefix. Images, fonts, stylesheets, and metadata
 image files stay in the segment under their own names.
+
+A page that is a list of sections keeps them in `sections/`, and those
+files keep the route stem (see `nextjs-sections-folder.md`).
 
 **Choosing the stem**
 
@@ -145,6 +149,13 @@ export default function OrdersPage({ params }: PageProps<"/orders/[id]">) {
 }
 ```
 
+**The page component is named `<Stem>Page`**
+
+`orders/[id]/page.tsx` exports `OrdersPage`. A page copied from another
+route keeps the old name until someone reads a stack trace, so rename it
+when you touch the file. The root element is the `<main>` landmark (see
+`nextjs-sections-folder.md`).
+
 **The page component is sync**
 
 The page never awaits. It passes `params` and `searchParams` down as the
@@ -176,9 +187,14 @@ exports gets no metadata file. An empty file tells the reader nothing. Segment c
 **A static page is a list of sections**
 
 A page with no request data needs no provider and no `<Suspense>`. Its
-blueprint is a list of server components:
+blueprint is a list of server components. They live in `sections/`, and the
+page holds no wrapper markup around them (see `nextjs-sections-folder.md`):
 
 ```tsx
+import { BenefitsHero } from "./sections/benefits.hero"
+import { BenefitsRewards } from "./sections/benefits.rewards"
+import { BenefitsSecurity } from "./sections/benefits.security"
+
 export { generateMetadata } from "./benefits.metadata"
 
 export default function BenefitsPage() {
@@ -216,7 +232,9 @@ export { LandingScreen as default } from "@/components/marketing"
 - Did every access check stay where it was, with the user told about it?
 - Do routing exports live in `<stem>.metadata.ts`, with no empty metadata
 file?
-- Does the file have zero conditionals and zero data reads?
+- Does the file have zero conditionals, zero data reads, and no
+commented-out JSX?
+- Is the component named `<Stem>Page`, with `<main>` as its root?
 
 **Official docs:** `page` (params, searchParams), `generate-metadata`,
 `migrating-to-cache-components`, `use-cache`, `data-security`,
@@ -264,25 +282,36 @@ The page reads as if the history were static.
 </main>
 ```
 
-**A boundary deep inside a static section**
+**A boundary inside a static section**
 
-When the streamed part sits inside static markup, the section takes
-`children` and the page passes the boundary in:
+A page that lists sections stays a list. The section that streams owns its
+boundary, one level below the page, and the page shows `<BenefitsPricing />`:
 
 ```tsx
-<BenefitsPricing>
-  <Suspense fallback={<Price.Skeleton />}>
-    <Price />
-  </Suspense>
-</BenefitsPricing>
+// sections/benefits.pricing.tsx
+export function BenefitsPricing() {
+  return (
+    <section>
+      <h2>Pricing</h2>
+      <Suspense fallback={<BenefitsPrice.Skeleton />}>
+        <BenefitsPrice />
+      </Suspense>
+    </section>
+  )
+}
 ```
 
-The section stays static, and the page still shows what streams.
+The section's static markup stays in the shell. A reader who wants to know
+what streams opens `page.tsx` and then the files in `sections/`, and never
+goes deeper. A route with the full module shape keeps every boundary in the
+page, as in the example above.
 
 **Rules for boundaries**
 
 - A leaf never wraps itself in `<Suspense>` or in an error boundary. Both
-are written in the page.
+are written in the page. The one other place is a section file in
+`sections/`, on a page that is a list of sections (see
+`nextjs-sections-folder.md`).
 - Each boundary wraps one async component. Two reads get two boundaries.
 - Anything that renders the same in the fallback and the result goes above
 the boundary. The page heading always does.
@@ -319,7 +348,8 @@ says that the result is written in `page.tsx`.
 
 **Checklist**
 
-- Is every `<Suspense>` in the route written in `page.tsx`?
+- Is every `<Suspense>` in the route written in `page.tsx`, or in a section
+file on a page that lists sections?
 - Is each fallback the wrapped module's `.Skeleton`, even when it is one
 element?
 - If the task may not change what streams, did you add no boundary and tell
@@ -444,6 +474,41 @@ The page shows where the route streams. The root shows what the route is
 made of. Add a provider when the first piece of client state appears, not
 before.
 
+**A small component splits into `<stem>.tsx` and `<stem>.client.tsx`**
+
+A component with no provider often needs one interactive part, such as a
+menu that reads server data and opens on a tap. The server half keeps the
+plain name, because it is the file consumers import. The interactive half
+is `<stem>.client.tsx` and starts with `"use client"`:
+
+```text
+nav-mobile.tsx           // async, reads data, renders <NavMobileClient>
+nav-mobile.client.tsx    // "use client", state and handlers
+```
+
+The server half passes plain data as props and server-rendered parts as
+`children`. Only the server half imports the client half. A stem gets one
+`.client.tsx`. When a second client file appears, the component has grown
+into a module, and its client files take the role suffixes (`.context.tsx`,
+`.display.tsx`, `.actions.tsx`).
+
+Do not mark ordinary Server Components with `.server.tsx`. A file with no
+directive already renders on the server unless a client file imports it, so
+the suffix would end up on every file. Use `.server.tsx` for one case. Two
+components share a name and an API, one for each side, such as a
+`SignedIn` that awaits the session and a `SignedIn` that reads a hook:
+
+```text
+auth-state.server.tsx    // import "server-only", async
+auth-state.client.tsx    // "use client"
+```
+
+The suffix and the first line always agree. `.client.tsx` starts with
+`"use client"`, and `.server.ts` or `.server.tsx` starts with
+`import "server-only"`, so importing the wrong twin fails the build and does
+not fail in the browser. The folder's `index.ts` exports one twin at most,
+and the doc comment on each names the other.
+
 **Server-only code lives in `<stem>.server.ts`**
 
 The file starts with `import "server-only"`. It holds the module's data
@@ -466,6 +531,8 @@ word cost every reader a second look.
 - Does the client provider create `actions`?
 - Is each Server Component leaf under a provider large and static?
 - Does a route with no client state skip the provider?
+- Does every `.client.tsx` start with `"use client"`, and every `.server.*`
+file with `import "server-only"`?
 
 **Official docs:** `server-and-client-components` (Passing data from Server
 to Client Components, Interleaving Server and Client Components, Context
@@ -610,3 +677,167 @@ of it.
 - Did every access check stay where it was, with the user told about it?
 
 **Official docs:** `layout`, `data-security`, `authentication`.
+
+### 1.7 A page lists sections from sections/
+
+A page that is a list of sections keeps every section in a `sections/`
+folder beside `page.tsx`. The segment root then holds the page, its routing
+files, and nothing a reader has to skip.
+
+```text
+app/pricing/
+  page.tsx
+  pricing.metadata.ts
+  opengraph-image.png
+  sections/
+    pricing.hero.tsx
+    pricing.plans.tsx
+    pricing.plans.constants.ts
+    pricing.faq.tsx
+    pricing.checkout.tsx
+    images/
+```
+
+```tsx
+// page.tsx
+import { PricingCheckout } from "./sections/pricing.checkout"
+import { PricingFaq } from "./sections/pricing.faq"
+import { PricingHero } from "./sections/pricing.hero"
+import { PricingPlans } from "./sections/pricing.plans"
+
+export { generateMetadata } from "./pricing.metadata"
+
+export default function PricingPage() {
+  return (
+    <main>
+      <PricingHero />
+      <PricingPlans />
+      <PricingFaq />
+      <PricingCheckout />
+    </main>
+  )
+}
+```
+
+**Bad: the page wraps some sections and inlines others**
+
+```tsx
+<main>
+  <PricingHero />
+  <Section variant="muted">
+    <Container>
+      <PricingPlans />
+    </Container>
+  </Section>
+  <Section>
+    <Container>
+      <Suspense fallback={<CheckoutSkeleton />}>
+        <Checkout slug="pro">
+          <div className="grid gap-8">
+            <Checkout.Title />
+            <Checkout.Action />
+          </div>
+        </Checkout>
+      </Suspense>
+    </Container>
+  </Section>
+</main>
+```
+
+A reader cannot tell a section from its wrapper, and the last block is a
+section that was never named.
+
+**Every child of the root is one named section**
+
+Layout wrappers such as `<Section>` and `<Container>` go inside the section
+file. So does any markup the section needs around a shared component. When
+the page wants to wrap something, that thing is a section and gets a file.
+Shared sections from `components/<domain>/` sit in the same list.
+
+**Always create the folder**
+
+Create `sections/` for every page of this kind, even when it has one
+section. The shared rule that waits for three files does not apply here,
+because the gain is that every route reads the same way. `sections/` has no
+`index.ts`, and the page imports each file by its path.
+
+**Files keep the route stem**
+
+Files in `sections/` keep the route's stem and do not reset to the folder
+name. `sections/pricing.hero.tsx` exports `PricingHero`. A reset would put a
+`sections.hero.tsx` in every route, which makes file search, editor tabs,
+and stack traces useless. This is the one folder where the stem does not
+reset. Every section is a named export, and the name is the stem plus the
+suffix.
+
+Parts that only one section uses sit beside it in `sections/` and share its
+name, as `pricing.plans.constants.ts` does. When three or more files share
+that prefix, nest them as the shared rule says
+(`sections/plans/plans.table.tsx`). Three or more parts that several
+sections share go in `sections/parts/`, as `parts.image-frame.tsx`. Images
+that sections import move with them. Metadata image files stay in the segment root, where the router looks
+for them.
+
+**What stays beside `page.tsx`**
+
+`sections/` holds what the page root lists. The namespace file, the
+provider, gates, the skeleton, `<stem>.metadata.ts`, and `<stem>.server.ts`
+stay beside `page.tsx`. A route with the full module shape from the top of
+this skill has no `sections/` unless its page also lists static sections.
+
+**A section may own its boundary**
+
+A section that streams writes its own `<Suspense>` and error boundary,
+around one async component, with that module's `.Skeleton` as the fallback.
+The page shows `<PricingCheckout />` and stays a list. The section file is
+the only place below the page where a boundary may sit. Parts and leaves
+never wrap themselves (see `nextjs-blueprint-shows-topology.md`).
+
+```tsx
+// sections/pricing.checkout.tsx
+export function PricingCheckout() {
+  return (
+    <Section>
+      <Container>
+        <CheckoutErrorBoundary>
+          <Suspense fallback={<Checkout.Skeleton />}>
+            <Checkout slug="pro">
+              <Checkout.Card />
+            </Checkout>
+          </Suspense>
+        </CheckoutErrorBoundary>
+      </Container>
+    </Section>
+  )
+}
+```
+
+When two routes write the same block inside the boundary, that block is
+shared UI. Move it to `components/<domain>/` and keep one copy.
+
+**The page root is the main landmark**
+
+The root element of every page is `<main>`, or the repo's own component
+that renders it. Write it in `page.tsx`. Never write it inside a section, a
+root, or a namespace file, and never use a fragment as the page root. A
+page header that must sit flush with the top still goes inside `<main>`.
+Change the padding, not the landmark. When a layout already renders
+`<main>` around `children`, the page root is a fragment or a `<div>`, and
+no page under that layout renders a second one.
+
+A task that only moves files keeps the DOM it found. Tell the user which
+pages have no `<main>`, or have it inside a module file.
+
+**Checklist**
+
+- Is every child of the page root one named section, with no wrapper markup
+in the page?
+- Do all sections live in `sections/`, with the route stem and named
+exports?
+- Do module wiring and routing files stay beside `page.tsx`?
+- Does a boundary below the page sit only in a section file, around one
+async component?
+- Is the page root the `<main>` landmark, exactly once per route?
+
+**Official docs:** `project-structure` (Colocation), `page`,
+`instant-navigation`.

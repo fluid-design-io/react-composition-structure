@@ -50,25 +50,36 @@ The page reads as if the history were static.
 </main>
 ```
 
-**A boundary deep inside a static section**
+**A boundary inside a static section**
 
-When the streamed part sits inside static markup, the section takes
-`children` and the page passes the boundary in:
+A page that lists sections stays a list. The section that streams owns its
+boundary, one level below the page, and the page shows `<BenefitsPricing />`:
 
 ```tsx
-<BenefitsPricing>
-  <Suspense fallback={<Price.Skeleton />}>
-    <Price />
-  </Suspense>
-</BenefitsPricing>
+// sections/benefits.pricing.tsx
+export function BenefitsPricing() {
+  return (
+    <section>
+      <h2>Pricing</h2>
+      <Suspense fallback={<BenefitsPrice.Skeleton />}>
+        <BenefitsPrice />
+      </Suspense>
+    </section>
+  )
+}
 ```
 
-The section stays static, and the page still shows what streams.
+The section's static markup stays in the shell. A reader who wants to know
+what streams opens `page.tsx` and then the files in `sections/`, and never
+goes deeper. A route with the full module shape keeps every boundary in the
+page, as in the example above.
 
 **Rules for boundaries**
 
 - A leaf never wraps itself in `<Suspense>` or in an error boundary. Both
-are written in the page.
+are written in the page. The one other place is a section file in
+`sections/`, on a page that is a list of sections (see
+`nextjs-sections-folder.md`).
 - Each boundary wraps one async component. Two reads get two boundaries.
 - Anything that renders the same in the fallback and the result goes above
 the boundary. The page heading always does.
@@ -105,7 +116,8 @@ says that the result is written in `page.tsx`.
 
 **Checklist**
 
-- Is every `<Suspense>` in the route written in `page.tsx`?
+- Is every `<Suspense>` in the route written in `page.tsx`, or in a section
+file on a page that lists sections?
 - Is each fallback the wrapped module's `.Skeleton`, even when it is one
 element?
 - If the task may not change what streams, did you add no boundary and tell

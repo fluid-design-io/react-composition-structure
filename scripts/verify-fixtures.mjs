@@ -57,7 +57,7 @@ function verifyNext() {
   check("next: layout metadata re-exported from posts.layout.metadata.ts", html("posts/hello.html").includes("<title>Hello | Journal</title>"));
   check("next: a provider-free async root renders server leaves", html("posts/hello.html").includes("First post."));
   check("next: a cached page moved whole into terms.tsx prerenders with no boundary", html("terms.html").includes("Cached terms body."));
-  check("next: a boundary passed into a static section keeps the section in the shell", html("benefits.html").includes("pricing-frame") && html("benefits.html").includes("price-skeleton") && !html("benefits.html").includes("Price for"));
+  check("next: a section that owns its boundary keeps its static frame in the shell", html("benefits.html").includes("pricing-frame") && html("benefits.html").includes("price-skeleton") && !html("benefits.html").includes("Price for"));
 }
 
 function verifyTanstack() {
