@@ -13,9 +13,10 @@ file reads. They complement Vercel's `composition-patterns` skill. That skill
 explains component architecture. This one puts it into folders, files,
 exports, and names.
 
-Official framework docs and official framework skills own engineering
-practice, such as rendering, caching, and data fetching. When they contradict
-a rule here, follow them and tell the user what conflicted.
+Official framework docs and skills own engineering practice, such as
+rendering, caching, and data fetching. When sources disagree, verify their
+guidance against the installed framework version. Its runtime contracts
+take precedence over structural examples here. Tell the user what conflicted.
 
 ## When the rules do not cover a case
 
@@ -45,6 +46,7 @@ above the file you are editing and match its dependency and its files:
 
 | Dependency and files | Read next |
 | --- | --- |
+| `one`, its `one/vite` configuration and configured route root | `../react-composition-structure-one/SKILL.md` |
 | `expo-router`, and `app/_layout.tsx` | `../react-composition-structure-expo/SKILL.md` |
 | `next`, and `app/**/page.tsx` | `../react-composition-structure-nextjs/SKILL.md` |
 | `@tanstack/react-start` or `@tanstack/react-router`, and `routeTree.gen.ts` | `../react-composition-structure-tanstack-start/SKILL.md` |

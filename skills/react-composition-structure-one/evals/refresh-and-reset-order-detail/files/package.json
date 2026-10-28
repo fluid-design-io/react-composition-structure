@@ -1,0 +1,27 @@
+{
+  "name": "fixture-one",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "one build",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@callstack/liquid-glass": "0.8.2",
+    "@react-navigation/native": "8.0.0-alpha.51",
+    "one": "2.11.5",
+    "react": "19.3.0",
+    "react-dom": "19.3.0",
+    "react-native": "0.88.0",
+    "react-native-reanimated": "4.7.1",
+    "react-native-screens": "4.30.0",
+    "react-native-web": "0.21.2",
+    "react-native-worklets": "0.13.0"
+  },
+  "devDependencies": {
+    "@types/node": "^24.0.0",
+    "@types/react": "^19.3.0",
+    "typescript": "7.0.2",
+    "vite": "8.2.2"
+  }
+}

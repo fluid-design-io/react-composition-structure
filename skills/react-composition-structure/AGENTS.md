@@ -1,7 +1,9 @@
 # React Composition Structure
 
-Engineering  
-September 2026  
+Engineering
+
+October 2026
+
 Version 2.0.0
 
 > Note:
@@ -517,10 +519,15 @@ monorepo package can list `next` without owning any routes.
 
 | Dependency | Files | Read next |
 | --- | --- | --- |
+| `one` | Vite config using `one/vite`, and its configured route root | `../react-composition-structure-one/SKILL.md` |
 | `expo-router` | `app/_layout.tsx` or `src/app/_layout.tsx` | `../react-composition-structure-expo/SKILL.md` |
 | `next` | `app/**/page.tsx` or `src/app/**/page.tsx` | `../react-composition-structure-nextjs/SKILL.md` |
 | `@tanstack/react-start` or `@tanstack/react-router` | `routeTree.gen.ts`, and `createFileRoute(` under `src/routes/` | `../react-composition-structure-tanstack-start/SKILL.md` |
 | anything else | any | `placement-separate-tree.md` |
+
+Check One before matching a dependency retained during migration. Its plugin
+and configured root must own the route being edited. Do not classify it from
+the spelling of `_layout.tsx` alone.
 
 "Anything else" includes React Navigation, React Router, the Next.js Pages
 Router, TanStack routes defined in code, and apps with no router. A Next.js

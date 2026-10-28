@@ -1,7 +1,7 @@
 {
   "version": "2.0.0",
   "organization": "Engineering",
-  "date": "September 2026",
+  "date": "October 2026",
   "skills": {
     "react-composition-structure": {
       "title": "React Composition Structure"
@@ -14,6 +14,9 @@
     },
     "react-composition-structure-tanstack-start": {
       "title": "React Composition Structure for TanStack Start"
+    },
+    "react-composition-structure-one": {
+      "title": "React Composition Structure for One"
     }
   }
 }

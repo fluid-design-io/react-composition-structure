@@ -1,7 +1,9 @@
 # React Composition Structure for Next.js
 
-Engineering  
-September 2026  
+Engineering
+
+October 2026
+
 Version 2.0.0
 
 > Note:

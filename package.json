@@ -6,6 +6,7 @@
   "type": "module",
   "scripts": {
     "build": "node scripts/build-agents.mjs",
-    "verify": "node scripts/verify-fixtures.mjs"
+    "verify": "node scripts/verify-fixtures.mjs",
+    "verify:one": "bun scripts/verify-one.mjs"
   }
 }

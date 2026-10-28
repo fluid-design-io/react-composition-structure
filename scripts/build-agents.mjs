@@ -23,6 +23,7 @@ const FORBIDDEN = {
   [`${SHARED}-nextjs`]: /\bexpo\b|createFileRoute|routeTree|react-native|screens\/|getRouteApi|_layout|tanstack/i,
   [`${SHARED}-expo`]: /(?<![.\w])page\.tsx|createFileRoute|use client|routeTree|next\.js|tanstack/i,
   [`${SHARED}-tanstack-start`]: /\bexpo\b|(?<![.\w])page\.tsx|use client|_layout|next\.js/i,
+  [`${SHARED}-one`]: /(?<![.\w])page\.tsx|createFileRoute|routeTree\.gen|use client|next\.js|expo-router|tanstack/i,
 };
 
 // Punctuation the prose style bans everywhere.
@@ -140,7 +141,7 @@ for (const [skill, { title }] of Object.entries(metadata.skills)) {
   const out =
     [
       `# ${title}`,
-      `${metadata.organization}  \n${metadata.date}  \nVersion ${metadata.version}`,
+      `${metadata.organization}\n\n${metadata.date}\n\nVersion ${metadata.version}`,
       head,
       "## Table of Contents",
       buildToc(rules),

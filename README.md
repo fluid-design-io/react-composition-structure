@@ -2,12 +2,13 @@
 
 Agent skills that say where React files live, how to name them, and how a
 screen file reads. One shared skill covers every React and React Native
-codebase. Three framework skills add the placement rules for Next.js, Expo
-Router, and TanStack Start.
+codebase. Four framework skills add placement and composition rules for
+Next.js, Expo Router, TanStack Start, and One.
 
 These skills cover how code looks and where it sits. Official framework docs
-and official framework skills own rendering, caching, and data fetching, and
-they win any conflict.
+and skills own rendering, caching, and data fetching. Verify guidance against
+the installed framework version when sources disagree. Runtime contracts
+take precedence over structural examples.
 
 ## Install
 
@@ -22,6 +23,7 @@ npx skills add fluid-design-io/react-composition-structure --skill react-composi
 | Next.js App Router | `react-composition-structure` `react-composition-structure-nextjs` |
 | Expo Router | `react-composition-structure` `react-composition-structure-expo` |
 | TanStack Start | `react-composition-structure` `react-composition-structure-tanstack-start` |
+| One | `react-composition-structure` `react-composition-structure-one` |
 | React Navigation, Next.js Pages Router, React Router, no router | `react-composition-structure` |
 | A monorepo with several of these | the shared skill plus each framework skill |
 
@@ -51,12 +53,14 @@ skills/
   react-composition-structure-nextjs/           7 rules
   react-composition-structure-expo/             1 rule
   react-composition-structure-tanstack-start/   1 rule
+  react-composition-structure-one/              4 rules
 templates/<skill>.head.md    intro for each generated AGENTS.md
 metadata.json                version, date, skill titles
 scripts/build-agents.mjs     generates AGENTS.md and lints the skills
 scripts/verify-fixtures.mjs  builds the fixtures and checks the rules' claims
 fixtures/next/               a Next.js app that uses every Next.js rule
 fixtures/tanstack/           a TanStack Start app that uses the TanStack rule
+fixtures/one/                One route adapters and a loader-backed blueprint
 ```
 
 Each skill folder holds `SKILL.md`, `rules/`, and a generated `AGENTS.md`.
@@ -82,6 +86,31 @@ Installs and builds both fixtures, then checks 24 claims. Examples are that
 colocated files add no Next.js routes, that a re-exported `generateMetadata`
 sets the title, and that the TanStack generator turns an empty stem-dotted
 file into a live route. Run it when a framework ships a major version.
+
+```bash
+bun run verify:one
+```
+
+Installs the pinned One fixture with Bun, typechecks route adapters and an
+Android Compose leaf, builds the web app, and serves it on a temporary local
+port. It checks route discovery, loader payloads, state gates and exclusion
+of private server code from browser output. It stops only its own server.
+It does not compile or exercise a native binary.
+
+## One framework
+
+Install the shared skill and the One subset together. Also install the
+official skills from `onejs/skills` when they are not already available.
+
+```bash
+bunx skills add fluid-design-io/react-composition-structure --skill react-composition-structure react-composition-structure-one
+```
+
+The personal subset owns blueprint topology, module placement and state
+ownership. The official skills are a discovery index for One APIs and
+engineering practice. Their native advice can lag the current release, so
+the subset requires verification against current docs and installed source.
+It does not prescribe a bundler, UI library, backend or update service.
 
 ## Principles
 
@@ -113,7 +142,7 @@ Rule file prefixes:
 - `naming-` for stems and suffixes
 - `organization-` for the nest, group, and lift triggers
 - `placement-` for where a module sits, in the shared skill
-- `nextjs-`, `expo-`, `tanstack-` for framework rules
+- `nextjs-`, `expo-`, `tanstack-`, `one-` for framework rules
 
 Shared rules never name a framework. Example trees in shared rules have no
 parent directory. `placement-detect-router.md` is the one exception, and its
