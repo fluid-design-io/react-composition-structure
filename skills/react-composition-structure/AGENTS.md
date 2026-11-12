@@ -252,7 +252,7 @@ Problems:
 - `items` and `isSubmitting` now have two owners, and the copy can drift
 - each action relays one event and hides the actor's typed events
 - every leaf re-renders on every snapshot, because the value is rebuilt whole
-- the next change has two places to go, so it often lands in both
+- a later change to either fact has to be made in the actor and in the provider
 
 **Good: the provider provides the actor, and leaves select from it**
 
@@ -329,8 +329,8 @@ status derived from a query and a network hook together
 - a shared component that several modules use and that takes a value prop
 
 For the shared component, each module's provider builds the value from its
-own selectors. The shared leaves never learn which actor feeds them, and the
-relay actions are fine here because the shared contract asks for them:
+own selectors. The shared leaves never import the actor, and the relay
+actions are fine here because the shared contract asks for them:
 
 ```tsx
 function CheckoutSummaryProvider({ children }: PropsWithChildren) {
