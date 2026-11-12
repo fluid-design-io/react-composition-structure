@@ -12,7 +12,7 @@ domain orchestration.
 
 This guide has five rule areas:
 
-1. shared component folders
+1. shared component folders, and where leaves read state
 2. route-bound domain modules, screen blueprints, and module placement
 3. public API boundaries
 4. naming stems and suffixes

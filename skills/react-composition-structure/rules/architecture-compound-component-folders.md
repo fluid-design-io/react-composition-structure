@@ -85,6 +85,12 @@ function ComposerInput() {
 The contract lives in `composer.types.ts` and the provider in
 `composer.context.tsx`. Leaves consume the contract and never own state.
 
+When an actor or store already owns a module's state, the module's leaves
+read it there through named selectors, and the provider only provides the
+actor. The contract then serves state that no actor owns and shared
+compounds that several modules feed. `architecture-read-state-from-its-owner.md`
+decides which applies.
+
 **State sharing follows the provider, not the layout**
 
 A component outside the visible frame can read and change the state when it
