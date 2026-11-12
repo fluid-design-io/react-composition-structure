@@ -3,7 +3,7 @@ name: react-composition-structure-tanstack-start
 description: File structure for TanStack Start and file-based TanStack Router apps. Use when adding or restructuring a route under `src/routes/`, deciding what a `createFileRoute` file contains, placing loaders and `createServerFn` wrappers, colocating components beside a route, or reading params from a component with `getRouteApi`.
 metadata:
   author: oliverpan
-  version: 2.0.0
+  version: 2.1.0
 ---
 
 # React composition structure for TanStack Start

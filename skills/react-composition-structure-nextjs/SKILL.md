@@ -3,7 +3,7 @@ name: react-composition-structure-nextjs
 description: File structure and page composition for the Next.js App Router. Use when adding or restructuring a route segment, deciding what `page.tsx` contains, placing `<Suspense>` boundaries and skeletons in a page, splitting a compound component across the server and client boundary, moving `generateMetadata` out of a page, or choosing between a state gate and a server-decided variant.
 metadata:
   author: oliverpan
-  version: 2.0.0
+  version: 2.1.0
 ---
 
 # React composition structure for Next.js

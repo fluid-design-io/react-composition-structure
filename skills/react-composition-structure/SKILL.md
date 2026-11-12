@@ -1,9 +1,9 @@
 ---
 name: react-composition-structure
-description: File and folder structure for React and React Native codebases. Use when restructuring a component folder or a route-bound domain module (a calendar, cart, or checkout module), composing a screen as a blueprint with `*.states.tsx` gates, grouping a long flat module into role folders, cleaning up `index.ts` exports, normalizing file names, colocating `*.data.ts` files, or deciding where a screen's module sits relative to its route file.
+description: File and folder structure for React and React Native codebases. Use when restructuring a component folder or a route-bound domain module (a calendar, cart, or checkout module), composing a screen as a blueprint with `*.states.tsx` gates, grouping a long flat module into role folders, cleaning up `index.ts` exports, normalizing file names, colocating `*.data.ts` files, deciding whether leaves read a context value or an actor or store directly, or deciding where a screen's module sits relative to its route file.
 metadata:
   author: oliverpan
-  version: 2.0.0
+  version: 2.1.0
 ---
 
 # React composition structure
@@ -111,6 +111,7 @@ Read the one rule file that matches the job. Each is in `rules/`.
 | Rule | Covers |
 | --- | --- |
 | `architecture-compound-component-folders` | One folder and one namespace for shared multi-part UI, with a `state`, `actions`, `meta` context contract |
+| `architecture-read-state-from-its-owner` | Whether a leaf reads a module context value or an actor or store through selectors and events |
 | `architecture-route-bound-module-folders` | Module folders for pages and screens, thin route files, module-owned params, `<stem>.data.ts` |
 | `architecture-screen-blueprints` | Screens as declarative trees, gates, design notes on the subtree |
 | `placement-detect-router` | Deciding placement from workspace evidence |

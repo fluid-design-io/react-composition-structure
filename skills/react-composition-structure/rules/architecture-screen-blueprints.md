@@ -17,8 +17,10 @@ states it can be in, without opening a leaf.
 
 A screen with one render state is already a blueprint if it follows that
 rule. Gates are the layer you add when a second render state appears. A gate
-is a leaf that reads the module context and returns `null` unless its state
-holds. The parent never decides visibility.
+is a leaf that reads module state and returns `null` unless its state holds.
+It reads the context value, or the owning actor through a selector (see
+`architecture-read-state-from-its-owner.md`). The parent never decides
+visibility.
 
 **Bad: the screen owns the branching**
 
@@ -110,7 +112,9 @@ state edits two files. Give the gates a provider and let each read context.
 
 With three or more states, derive one discriminated status in the provider,
 such as `"offline" | "loading" | "error" | "ready"`, and let each gate test
-it. Gates that each rebuild precedence from query booleans drift apart.
+it. Gates that each rebuild precedence from query booleans drift apart. When
+an actor owns the states, its state value or one named selector beside its
+logic is that status.
 
 **Notes sit on the subtree they explain**
 

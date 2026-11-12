@@ -3,7 +3,7 @@ name: react-composition-structure-expo
 description: File structure for Expo Router apps. Use when adding or restructuring a screen, deciding what a route file under `app/` contains, moving screen code out of `app/`, pointing two routes at one screen, or naming platform-specific files such as `.ios.tsx` inside a module.
 metadata:
   author: oliverpan
-  version: 2.0.0
+  version: 2.1.0
 ---
 
 # React composition structure for Expo Router

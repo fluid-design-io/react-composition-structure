@@ -63,6 +63,8 @@ page
 - `.params.ts` for route-param parsing
 - `.types.ts` for shared types
 - `.context.tsx` for provider wiring
+- `.machine.ts` or `.store.ts` for an actor's or a store's logic and its named
+selectors
 - `.states.tsx` for gates (see `architecture-screen-blueprints.md`)
 - `.display.tsx` and `.actions.tsx` for read-oriented and interactive leaves
 - `.functions.ts` for server function wrappers that any file may import

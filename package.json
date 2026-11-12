@@ -1,6 +1,6 @@
 {
   "name": "react-composition-structure",
-  "version": "2.0.0",
+  "version": "2.1.0",
   "private": true,
   "description": "React file-structure skills for agents: one shared skill plus Next.js, Expo Router, and TanStack Start skills. Each AGENTS.md is generated from rules/ by the build script.",
   "type": "module",

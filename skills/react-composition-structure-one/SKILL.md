@@ -3,7 +3,7 @@ name: react-composition-structure-one
 description: Blueprint topology and module placement for One framework (onestack.dev) apps. Use whenever a package imports `one` or configures `one/vite` and the work adds or restructures a screen, layout or route file, moves code out of the route directory, connects a `loader` or `useLoader` to a screen's provider, adds `+ssr`, `+spa` or `+api` routes, or composes React Native with One's SwiftUI, Compose and imported native views. Use it even when the user only says "add a page" or "clean up this screen" in a One app.
 metadata:
   author: oliverpan
-  version: 2.0.0
+  version: 2.1.0
 ---
 
 # React composition structure for One

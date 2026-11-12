@@ -2,9 +2,9 @@
 
 Engineering
 
-October 2026
+November 2026
 
-Version 2.0.0
+Version 2.1.0
 
 > Note:
 > This guide is written for agents and AI-assisted refactors. It covers
@@ -20,7 +20,7 @@ domain orchestration.
 
 This guide has five rule areas:
 
-1. shared component folders
+1. shared component folders, and where leaves read state
 2. route-bound domain modules, screen blueprints, and module placement
 3. public API boundaries
 4. naming stems and suffixes
@@ -44,6 +44,7 @@ Router, and TanStack Start placements each have their own skill.
 
 1. [Component folders](#1-component-folders) (HIGH)
   - 1.1 [Use compound component folders for shared multi-part UI](#11-use-compound-component-folders-for-shared-multi-part-ui)
+  - 1.2 [Read each fact from the one place that owns it](#12-read-each-fact-from-the-one-place-that-owns-it)
 2. [Route-bound module folders](#2-route-bound-module-folders) (HIGH)
   - 2.1 [Use module folders for route-bound UI](#21-use-module-folders-for-route-bound-ui)
   - 2.2 [Compose screens as declarative blueprints](#22-compose-screens-as-declarative-blueprints)
@@ -137,6 +138,12 @@ function ComposerInput() {
 The contract lives in `composer.types.ts` and the provider in
 `composer.context.tsx`. Leaves consume the contract and never own state.
 
+When an actor or store already owns a module's state, the module's leaves
+read it there through named selectors, and the provider only provides the
+actor. The contract then serves state that no actor owns and shared
+compounds that several modules feed. `architecture-read-state-from-its-owner.md`
+decides which applies.
+
 **State sharing follows the provider, not the layout**
 
 A component outside the visible frame can read and change the state when it
@@ -200,6 +207,181 @@ to one domain. The namespace holds leaves only. Screens are top-level exports.
 - Does the folder expose one root namespace?
 - Do leaves read the context contract instead of a specific hook?
 - Does provider wiring sit apart from leaf rendering?
+
+### 1.2 Read each fact from the one place that owns it
+
+A leaf reads state from one of two places. One is a module context value
+(`state`, `actions`, `meta`) that a provider builds. The other is an actor or
+a store, which the leaf reads through selectors and drives with events. An
+actor here means any long-lived owner with a snapshot and typed events, such
+as a state machine or an external store. Choose by asking who owns the fact.
+
+| The fact | Where a leaf reads it |
+| --- | --- |
+| An actor or store already owns it | That actor, through a named selector. The leaf sends events to it. |
+| It is local UI state, or derived from several hooks that no actor owns | The module context value |
+| A shared component that several modules use consumes it | A value prop that the provider builds from selectors |
+
+Each fact has exactly one source. Never mirror an actor field into the module
+context.
+
+**Bad: the provider copies the actor into a context value**
+
+```tsx
+function CheckoutProvider({ children }: PropsWithChildren) {
+  const actor = useActor(checkoutLogic)
+  const snapshot = useSnapshot(actor)
+
+  const value = {
+    state: {
+      items: snapshot.context.items,
+      isSubmitting: snapshot.value === "submitting",
+    },
+    actions: {
+      submit: () => actor.send({ type: "submit" }),
+      removeItem: (id: string) => actor.send({ type: "removeItem", id }),
+    },
+  }
+
+  return <CheckoutContext value={value}>{children}</CheckoutContext>
+}
+```
+
+Problems:
+
+- `items` and `isSubmitting` now have two owners, and the copy can drift
+- each action relays one event and hides the actor's typed events
+- every leaf re-renders on every snapshot, because the value is rebuilt whole
+- a later change to either fact has to be made in the actor and in the provider
+
+**Good: the provider provides the actor, and leaves select from it**
+
+The file that owns the actor's logic also exports its selectors:
+
+```ts
+// checkout.machine.ts
+// ...the actor's logic and its typed events
+
+export const selectItems = (snapshot: CheckoutSnapshot) => snapshot.context.items
+
+export const selectCanSubmit = (snapshot: CheckoutSnapshot) =>
+  snapshot.value === "editing" && snapshot.context.items.length > 0
+```
+
+The provider creates the actor, sends outside values in as events, and
+provides it. It holds no copied flags and no relay actions:
+
+```tsx
+// checkout.context.tsx
+export function CheckoutProvider({ cartId, children }: CheckoutProviderProps) {
+  const actor = useActor(checkoutLogic, { input: { cartId } })
+  const online = useNetworkStatus()
+
+  useEffect(() => {
+    actor.send({ type: "networkChanged", online })
+  }, [actor, online])
+
+  return <CheckoutActorContext value={actor}>{children}</CheckoutActorContext>
+}
+```
+
+Each leaf selects its own slice and sends events directly, so it re-renders
+only when that slice changes:
+
+```tsx
+// checkout.actions.tsx
+export function CheckoutSubmit() {
+  const actor = useCheckoutActor()
+  const canSubmit = useSelector(actor, selectCanSubmit)
+
+  return <Button disabled={!canSubmit} onPress={() => actor.send({ type: "submit" })} />
+}
+```
+
+Use the selector hook and the event API your state library provides. A typed
+trigger such as `actor.trigger.submit()` follows the same rule.
+
+**Name a selector once it derives or repeats**
+
+An inline read of one plain field is fine, such as
+`useSelector(actor, (snapshot) => snapshot.context.note)`. A read that
+derives a value, or that a second leaf needs, becomes a named selector beside
+the logic.
+
+```tsx
+// checkout.actions.tsx
+useSelector(actor, (snapshot) => snapshot.value === "editing" && snapshot.context.items.length > 0)
+
+// checkout.footer.tsx
+useSelector(actor, (snapshot) => snapshot.context.items.length > 0)
+```
+
+These two leaves already disagree about when checkout can submit. Both should
+call `selectCanSubmit`.
+
+**The context value keeps two jobs**
+
+The `state`, `actions`, `meta` value from
+`architecture-compound-component-folders.md` stays the right tool for:
+
+- state that no actor owns, such as a selected tab, a measured height, or a
+status derived from a query and a network hook together
+- a shared component that several modules use and that takes a value prop
+
+For the shared component, each module's provider builds the value from its
+own selectors. The shared leaves never import the actor, and the relay
+actions are fine here because the shared contract asks for them:
+
+```tsx
+function CheckoutSummaryProvider({ children }: PropsWithChildren) {
+  const actor = useCheckoutActor()
+  const items = useSelector(actor, selectItems)
+
+  const value = {
+    state: { lines: items },
+    actions: { remove: (id: string) => actor.send({ type: "removeItem", id }) },
+  }
+
+  return <OrderSummary.Provider value={value}>{children}</OrderSummary.Provider>
+}
+```
+
+**A screen may have both**
+
+The actor context carries the facts the machine owns. The module context
+carries the facts it does not, such as which sheet is open. A gate or leaf
+may read either. A fact appears in only one of them.
+
+**Render boundaries re-provide the actor**
+
+A portal, a modal host, or any boundary that drops React context gets the
+same actor instance again, never a relay of its values:
+
+```tsx
+<Portal>
+  <CheckoutActorContext value={actor}>
+    <Checkout.Sheet />
+  </CheckoutActorContext>
+</Portal>
+```
+
+**A coherent existing convention stays**
+
+If a package already reads its actors one way throughout, follow it, and
+tell the user in one line where it differs from this rule. If the package
+mixes both patterns for the same kind of fact, follow this rule in new work
+and tell the user about the mix in one line.
+
+**Checklist**
+
+- Did you find the owner of each fact before choosing where a leaf reads it?
+- Does the provider only create the actor, provide it, and send outside
+values in as events?
+- Is every derived or repeated read a named selector in the file that owns
+the logic?
+- Do leaves send events to the actor instead of calling relay actions?
+- Does each fact appear in exactly one context?
+- Does each render boundary re-provide the same actor instance?
 
 ## 2. Route-bound module folders
 
@@ -350,8 +532,10 @@ states it can be in, without opening a leaf.
 
 A screen with one render state is already a blueprint if it follows that
 rule. Gates are the layer you add when a second render state appears. A gate
-is a leaf that reads the module context and returns `null` unless its state
-holds. The parent never decides visibility.
+is a leaf that reads module state and returns `null` unless its state holds.
+It reads the context value, or the owning actor through a selector (see
+`architecture-read-state-from-its-owner.md`). The parent never decides
+visibility.
 
 **Bad: the screen owns the branching**
 
@@ -443,7 +627,9 @@ state edits two files. Give the gates a provider and let each read context.
 
 With three or more states, derive one discriminated status in the provider,
 such as `"offline" | "loading" | "error" | "ready"`, and let each gate test
-it. Gates that each rebuild precedence from query booleans drift apart.
+it. Gates that each rebuild precedence from query booleans drift apart. When
+an actor owns the states, its state value or one named selector beside its
+logic is that status.
 
 **Notes sit on the subtree they explain**
 
@@ -751,6 +937,8 @@ page
 - `.params.ts` for route-param parsing
 - `.types.ts` for shared types
 - `.context.tsx` for provider wiring
+- `.machine.ts` or `.store.ts` for an actor's or a store's logic and its named
+selectors
 - `.states.tsx` for gates (see `architecture-screen-blueprints.md`)
 - `.display.tsx` and `.actions.tsx` for read-oriented and interactive leaves
 - `.functions.ts` for server function wrappers that any file may import
